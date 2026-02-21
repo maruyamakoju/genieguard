@@ -1,15 +1,74 @@
-# GenieGuard: World-Sim CI
+# GenieGuard: QA for the Vibe-Coding Era
 
-**A closed-loop CI pipeline that automatically audits and self-repairs physics in AI-generated games/simulators.**
+> **AI writes the game. AI also QA's the game.**
 
-GenieGuard injects physics bugs into a Matter.js world or an STG shooter, collects telemetry + screenshots, and diagnoses issues with Gemini 3.1 Pro Preview via a **2-Tier architecture**:
+In the age of vibe coding — where Cursor, Claude, and Copilot generate entire games in minutes — **nobody writes tests for the output**. Physics parameters are wrong, collisions don't work, gravity is inverted... and there's no QA engineer in the loop.
 
-- **Tier 1** applies catalog patches for known bugs
-- **Tier 2** uses a multi-agent VLM workflow — a **Vision Analyst** (screenshots) and a **Physics Analyst** (telemetry/config) run in parallel, then a **Repair Synthesizer** cross-validates findings to output a safe JSON patch (config diffs only, no code generation)
+**GenieGuard** is a closed-loop CI agent that **automatically detects, diagnoses, and self-repairs** broken physics in AI-generated games. It watches the running simulation, spots what's wrong, and fixes it — without human intervention.
 
-Patches are gated by a **sandbox** (whitelist + value-range validation), the sim auto-reloads, and the system re-verifies all 10 invariants. If verification fails, GenieGuard runs a **self-reflection loop** to re-diagnose and retry.
+---
 
-Result: a closed-loop CI step that turns "physics hallucinations" into a deterministic, repeatable QA + repair workflow for game developers.
+## Why This Matters
+
+Traditional game dev has unit tests, QA teams, and physics engine expertise. Vibe coding has none of that:
+
+| Traditional Dev | Vibe Coding |
+|---|---|
+| Physics engineer tunes parameters | AI generates config, nobody checks |
+| QA team plays and reports bugs | Ship it and hope for the best |
+| Unit tests catch regressions | No tests written at all |
+| Bugs found in days/weeks | Bugs shipped instantly to users |
+
+GenieGuard fills this gap: **the AI that QA's what AI built.**
+
+---
+
+## How It Works
+
+### 2-Tier Architecture
+
+**Tier 1 — Known Bug Patterns (Catalog Repair)**
+Invariant checks detect common physics bugs (gravity inversion, collision disabled, etc.) and apply pre-defined patches instantly. Fast and deterministic.
+
+**Tier 2 — Unknown Bugs (Multi-Agent VLM Reasoning)**
+For bugs GenieGuard has never seen before, three AI agents work together:
+
+```
+┌──────────────────────────────────────────────┐
+│           Tier 2: 3-Agent VLM Pipeline       │
+│                                              │
+│  Agent 1: Vision Analyst ──┐                 │
+│    (screenshots × 3)       ├→ Agent 3:       │
+│  Agent 2: Physics Analyst ─┘  Repair         │
+│    (telemetry + config)       Synthesizer    │
+│                               ↓              │
+│                          JSON Patch           │
+│                               ↓              │
+│                     Sandbox Validation        │
+│                    (whitelist + range)         │
+└──────────────────────────────────────────────┘
+```
+
+- **Vision Analyst** — looks at 3 consecutive screenshots, spots visual anomalies
+- **Physics Analyst** — analyzes telemetry data and config values against known-good defaults
+- **Repair Synthesizer** — cross-validates both agents' findings, generates a minimal safe patch
+
+Patches are **never raw code** — only config diffs, gated by a sandbox whitelist with value-range validation.
+
+### Self-Reflection Loop
+
+If repair fails verification, GenieGuard re-diagnoses with the failure context and retries. The system learns from its own mistakes within a single run.
+
+### Full Pipeline
+
+```
+Inject Bug → Collect Telemetry + Screenshots
+           → Tier 1 Invariant Check → Catalog Patch
+           → Tier 2 VLM Analysis → Sandbox Patch
+           → Re-verify all 10 invariants
+           → Self-Reflection if failed
+           → ✅ Ship or ⚠ Flag
+```
 
 ---
 
@@ -17,18 +76,31 @@ Result: a closed-loop CI step that turns "physics hallucinations" into a determi
 
 Open `web/dashboard.html` in a browser and press **"Start Auto Demo"**.
 
-The dashboard features a **JP/EN language toggle** for international demos.
-
-### Demo Flow
-
 ```
 Act 1: Known Bug → Tier 1 Catalog Repair
 Act 2: Unknown Bug → Tier 2 Multi-Agent VLM Reasoning + Self-Reflection
 ```
 
-### Free Mode — Judge Challenge
+**Free Mode** — Adjust any physics parameter via sliders and challenge GenieGuard to repair it with pure AI reasoning. No pre-defined patches. No hints.
 
-Manually adjust any physics parameter via sliders and challenge GenieGuard to repair it with pure AI reasoning (no pre-defined patches).
+The dashboard supports **JP/EN language toggle** for international demos.
+
+---
+
+## Supported Games
+
+| Game | Engine | Bug Types |
+|------|--------|-----------|
+| 2D Physics Sandbox | Matter.js | Gravity, collision, restitution, friction, bounds, mass, inertia, radius, time scale |
+| STG Shooter | Custom | Bullet speed, fire rate, spawn interval, enemy speed, player speed, hitbox radius |
+
+### Bug Examples
+
+**Tier 1 — Known (instant catalog fix):**
+Gravity inversion, collision disabled, infinite bounce, zero friction, bounds off, bullet freeze, hitbox gone, fire disabled, player/enemy freeze
+
+**Tier 2 — Unknown (VLM reasoning required):**
+Time frozen, lateral gravity, super-heavy ball, locked inertia, tiny ball, enemy swarm, slow bullets, hyper-fast enemies, giant hitbox, bullet spam
 
 ---
 
@@ -55,77 +127,14 @@ Opens http://localhost:8080 in your browser.
 ```bash
 python server.py --dashboard
 ```
-Click "Random Break" → "Run GenieGuard"
 
 **Option B: CLI**
 ```bash
-# Random break
-python break.py
-
-# Run GenieGuard (auto detect → repair → verify)
-python genieguard.py --no-break
-
-# Or full pipeline (break → detect → repair → verify)
-python genieguard.py
+python genieguard.py              # Full pipeline
+python genieguard.py --no-break   # Test current state
+python genieguard.py --specific B1 B3  # Inject specific bugs
+python genieguard.py --headless   # Headless mode
 ```
-
----
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                    GenieGuard Pipeline                   │
-├──────────┬──────────────────────────────────────────────┤
-│  STEP 1  │  Inject Bug (Tier1 known / Tier2 unknown)   │
-├──────────┼──────────────────────────────────────────────┤
-│  STEP 2  │  Collect Telemetry + Screenshots             │
-│          │  ├─ Tier 1: Invariant Check → Catalog Patch  │
-│          │  └─ Tier 2: 3-Agent VLM → Sandbox Patch      │
-│          │       ├─ Agent 1: Vision Analyst (parallel)   │
-│          │       ├─ Agent 2: Physics Analyst (parallel)  │
-│          │       └─ Agent 3: Repair Synthesizer          │
-├──────────┼──────────────────────────────────────────────┤
-│  STEP 3  │  Re-verify all 10 invariants                 │
-│          │  └─ Self-Reflection Loop if failed            │
-└──────────┴──────────────────────────────────────────────┘
-```
-
----
-
-## Bug Types
-
-### Tier 1 — Known Bugs (Catalog Repair)
-
-**Physics Simulator:**
-
-| ID | Bug | Mutation | Visible Effect |
-|----|-----|----------|----------------|
-| B1 | Gravity Inversion | gravityY = -1 | Ball floats up |
-| B2 | Collision Disabled | collisionMask = 0 | Falls through floor |
-| B3 | Abnormal Restitution | restitution = 5.0 | Accelerating bounces |
-| B4 | Zero Friction | friction = 0 | Slides forever |
-| B5 | Bounds Disabled | boundsEnabled = false | Disappears off-screen |
-
-**STG Shooter:**
-
-| ID | Bug | Mutation | Visible Effect |
-|----|-----|----------|----------------|
-| S1 | Bullet Freeze | bulletSpeed = 0 | Bullets don't move |
-| S2 | Hitbox Gone | hitboxRadius = 0 | No collision detection |
-| S3 | Fire Disabled | fireRate = 999 | Can't shoot |
-| S4 | Player Freeze | playerSpeed = 0 | Can't move |
-| S5 | Enemy Freeze | enemySpeed = 0 | Enemies stop |
-
-### Tier 2 — Unknown Bugs (VLM Reasoning Repair)
-
-| ID | Bug | Mutation | Detection Method |
-|----|-----|----------|-----------------|
-| U1/X1 | Time/Spawn anomaly | timeScale=0.01 / spawnInterval=2 | Behavioral analysis |
-| U2/X2 | Lateral gravity/Slow bullets | gravityX=5 / bulletSpeed=0.3 | Telemetry drift |
-| U3/X3 | Heavy ball/Fast enemies | ballMass=10000 / enemySpeed=15 | Physics anomaly |
-| U4/X4 | Locked inertia/Giant hitbox | ballInertia=99999999 / hitboxRadius=300 | VLM observation |
-| U5/X5 | Tiny ball/Bullet spam | ballRadius=3 / fireRate=1 | Multi-screenshot analysis |
 
 ---
 
@@ -137,61 +146,29 @@ genieguard/
 │   ├── index.html              # Physics simulator (Matter.js)
 │   ├── stg.html                # STG shooter game
 │   ├── dashboard.html          # Demo dashboard (JP/EN)
-│   ├── sim.js                  # Physics engine
-│   ├── config.js               # Physics parameters (repair target)
-│   ├── telemetry.js            # Telemetry system
-│   └── hud.js                  # HUD overlay
+│   ├── sim.js / config.js      # Physics engine + parameters
+│   ├── telemetry.js / hud.js   # Telemetry + HUD overlay
 │
 ├── genieguard/                 # Python modules
-│   ├── random_breaker.py       # Random bug injection
-│   ├── telemetry_collector.py  # Telemetry collection
+│   ├── random_breaker.py       # Bug injection
+│   ├── telemetry_collector.py  # Data collection
 │   ├── invariant_checker.py    # Numeric invariant checks
 │   ├── patch_selector.py       # LLM patch selection
 │   ├── patch_applier.py        # Patch application
 │   └── evidence_exporter.py    # Evidence export
 │
-├── data/
-│   └── patch_catalog.json      # Patch catalog
-│
 ├── genieguard.py               # Main CLI
-├── break.py                    # Break script
 ├── server.py                   # Dev server
-└── requirements.txt            # Dependencies
+└── data/patch_catalog.json     # Patch catalog
 ```
 
 ## Design Principles
 
-1. **Telemetry-driven detection** — PASS/FAIL is determined by numeric invariants, not VLM
-2. **Patch catalog (Tier 1)** — LLM selects a patch_id only; no code generation
-3. **Sandbox validation (Tier 2)** — AI-generated patches are gated by whitelist + range checks
-4. **Self-Reflection** — Failed repairs trigger re-diagnosis with failure context
-5. **Multi-game support** — Same pipeline works for physics sims and STG shooters
-
-## CLI Options
-
-```bash
-# Full pipeline (break → detect → repair → verify)
-python genieguard.py
-
-# Skip break (test current state)
-python genieguard.py --no-break
-
-# Inject specific bugs
-python genieguard.py --specific B1 B3
-
-# Set bug count
-python genieguard.py --bugs 2
-
-# Headless mode
-python genieguard.py --headless
-```
-
-## Environment Variables
-
-```bash
-# Gemini API key (optional — falls back without it)
-export GEMINI_API_KEY=your_api_key
-```
+1. **Telemetry-driven detection** — PASS/FAIL by numeric invariants, not VLM opinion
+2. **No code generation** — Tier 1 selects patch IDs; Tier 2 outputs config diffs only
+3. **Sandbox everything** — AI patches are gated by whitelist + value-range validation
+4. **Self-Reflection** — Failed repairs trigger re-diagnosis, not just retry
+5. **Multi-game** — Same pipeline works for physics sims and shooters
 
 ## License
 
