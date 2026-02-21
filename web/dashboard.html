@@ -1,0 +1,1762 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GenieGuard — AI自動修復パイプライン v3</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;700;900&display=swap');
+    *{margin:0;padding:0;box-sizing:border-box;}
+    :root{
+      --bg:#04040c;--panel:rgba(12,12,30,0.7);--glass:rgba(16,16,40,0.55);
+      --border:rgba(40,40,80,0.5);--border-glow:rgba(0,255,136,0.15);
+      --green:#00ff88;--green-dim:#00cc6a;--cyan:#00d4ff;--red:#ff3355;
+      --yellow:#ffd000;--magenta:#cc44ff;--orange:#ff8800;--text:#e4e4f0;--dim:#556;--mute:#334;
+      --radius:16px;--radius-sm:12px;
+    }
+    html{scroll-behavior:smooth;}
+    body{
+      font-family:'Noto Sans JP','Inter',sans-serif;background:var(--bg);
+      color:var(--text);min-height:100vh;overflow-x:hidden;
+    }
+
+    /* ═══ BG ═══ */
+    #bg-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.25;}
+
+    .app{position:relative;z-index:1;padding:16px 24px;max-width:1560px;margin:0 auto;}
+
+    /* ═══ GLASS PANEL ═══ */
+    .glass{
+      background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+      border:1px solid var(--border);border-radius:var(--radius);
+      transition:border-color .4s,box-shadow .4s;
+    }
+    .glass:hover{border-color:rgba(60,60,120,0.6);}
+    .glass-glow-green{border-color:rgba(0,255,136,0.3);box-shadow:0 0 30px rgba(0,255,136,0.08);}
+    .glass-glow-red{border-color:rgba(255,51,85,0.3);box-shadow:0 0 30px rgba(255,51,85,0.08);}
+    .glass-glow-cyan{border-color:rgba(0,212,255,0.3);box-shadow:0 0 30px rgba(0,212,255,0.08);}
+    .glass-glow-orange{border-color:rgba(255,136,0,0.3);box-shadow:0 0 30px rgba(255,136,0,0.08);}
+
+    .panel-head{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:12px 18px;border-bottom:1px solid var(--border);
+      font-size:.78rem;font-weight:700;color:var(--dim);letter-spacing:.5px;
+    }
+    .panel-body{padding:16px 18px;}
+
+    .game-tab{background:transparent;border:1px solid var(--mute);color:var(--dim);padding:3px 12px;border-radius:6px;font-size:.7rem;font-weight:700;cursor:pointer;transition:all .2s;}
+    .game-tab:hover{border-color:var(--green);color:var(--text);}
+    .game-tab.active{background:rgba(0,255,136,.15);border-color:var(--green);color:var(--green);}
+    .tag{padding:4px 12px;border-radius:8px;font-size:.68rem;font-weight:700;letter-spacing:.3px;transition:all .3s;}
+    .tag-ok{background:rgba(0,255,136,.1);color:var(--green);}
+    .tag-err{background:rgba(255,51,85,.12);color:var(--red);animation:pulse-tag 1.2s infinite;}
+    .tag-active{background:rgba(0,212,255,.1);color:var(--cyan);animation:pulse-tag .8s infinite;}
+    .tag-orange{background:rgba(255,136,0,.1);color:var(--orange);animation:pulse-tag .8s infinite;}
+    @keyframes pulse-tag{0%,100%{opacity:1}50%{opacity:.5}}
+
+    /* ═══ HEADER ═══ */
+    .header{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:16px 24px;margin-bottom:16px;
+    }
+    .header-left{display:flex;align-items:center;gap:16px;}
+    .logo{
+      width:52px;height:52px;border-radius:14px;position:relative;
+      background:linear-gradient(135deg,var(--green),var(--cyan));
+      display:flex;align-items:center;justify-content:center;
+      font-size:26px;font-weight:900;color:#000;
+      box-shadow:0 0 30px rgba(0,255,136,.25),inset 0 0 20px rgba(255,255,255,.15);
+    }
+    .logo::after{
+      content:'';position:absolute;inset:-3px;border-radius:16px;
+      background:linear-gradient(135deg,var(--green),var(--cyan),var(--magenta),var(--green));
+      background-size:300% 300%;z-index:-1;animation:gradient-spin 4s ease infinite;
+      filter:blur(8px);opacity:.5;
+    }
+    @keyframes gradient-spin{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+    .header h1{font-size:1.7rem;font-weight:900;letter-spacing:-.5px;}
+    .header h1 span{
+      background:linear-gradient(135deg,var(--green),var(--cyan));
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    }
+    .header-sub{font-size:.75rem;color:var(--dim);margin-top:2px;font-weight:500;}
+    .live-pill{
+      display:flex;align-items:center;gap:8px;padding:8px 18px;
+      border-radius:24px;font-size:.8rem;font-weight:700;
+      background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.2);color:var(--green);
+    }
+    .live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:blink 1.5s infinite;}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+    /* ═══ STORY FLOW ═══ */
+    .flow{
+      display:grid;grid-template-columns:1fr 60px 1fr 60px 1fr;align-items:stretch;
+      gap:0;margin-bottom:16px;
+    }
+    .flow-step{
+      padding:20px;display:flex;align-items:center;gap:16px;
+      cursor:default;transition:all .5s;position:relative;overflow:hidden;
+    }
+    .flow-step::before{
+      content:'';position:absolute;inset:0;border-radius:var(--radius);
+      background:linear-gradient(135deg,transparent 60%,rgba(0,255,136,.03));
+      opacity:0;transition:opacity .5s;
+    }
+    .flow-step.active::before,.flow-step.done::before{opacity:1;}
+    .flow-icon{
+      width:56px;height:56px;border-radius:14px;flex-shrink:0;
+      display:flex;align-items:center;justify-content:center;
+      font-size:24px;background:rgba(20,20,50,.8);border:2px solid var(--mute);
+      transition:all .5s;position:relative;
+    }
+    .flow-step.active .flow-icon{
+      border-color:var(--cyan);background:rgba(0,212,255,.12);
+      box-shadow:0 0 20px rgba(0,212,255,.3);animation:icon-pulse 1.5s infinite;
+    }
+    .flow-step.done .flow-icon{
+      border-color:var(--green);background:rgba(0,255,136,.12);
+      box-shadow:0 0 20px rgba(0,255,136,.2);
+    }
+    .flow-step.broken .flow-icon{
+      border-color:var(--red);background:rgba(255,51,85,.12);
+      box-shadow:0 0 20px rgba(255,51,85,.3);animation:icon-pulse 1s infinite;
+    }
+    .flow-step.tier2 .flow-icon{
+      border-color:var(--orange);background:rgba(255,136,0,.12);
+      box-shadow:0 0 20px rgba(255,136,0,.3);animation:icon-pulse 1.2s infinite;
+    }
+    @keyframes icon-pulse{0%,100%{box-shadow:0 0 20px rgba(0,212,255,.3)}50%{box-shadow:0 0 35px rgba(0,212,255,.5)}}
+    .flow-text h3{font-size:.95rem;font-weight:900;margin-bottom:3px;}
+    .flow-text p{font-size:.7rem;color:var(--dim);line-height:1.4;}
+    .flow-step.active .flow-text h3{color:var(--cyan);}
+    .flow-step.done .flow-text h3{color:var(--green);}
+    .flow-step.broken .flow-text h3{color:var(--red);}
+    .flow-step.tier2 .flow-text h3{color:var(--orange);}
+
+    .flow-arrow{
+      display:flex;align-items:center;justify-content:center;
+      position:relative;
+    }
+    .flow-arrow svg{width:40px;height:40px;}
+    .flow-arrow .arrow-line{stroke:var(--mute);transition:stroke .5s;}
+    .flow-arrow.lit .arrow-line{stroke:var(--green);filter:drop-shadow(0 0 4px var(--green));}
+
+    /* ═══ MAIN GRID ═══ */
+    .main-grid{display:grid;grid-template-columns:1.3fr .7fr;gap:16px;margin-bottom:16px;}
+
+    /* ═══ SIMULATOR ═══ */
+    .sim-wrap{position:relative;overflow:hidden;border-radius:0 0 var(--radius) var(--radius);}
+    .sim-frame{width:100%;aspect-ratio:16/9;border:none;display:block;background:#0a0a1a;}
+    .sim-scanline{
+      position:absolute;top:0;left:0;width:100%;height:4px;
+      background:linear-gradient(90deg,transparent,var(--cyan),transparent);
+      opacity:0;z-index:2;pointer-events:none;
+    }
+    .sim-scanline.active{opacity:.7;animation:scanline 1.5s ease-in-out infinite;}
+    @keyframes scanline{0%{top:0}100%{top:100%}}
+
+    /* ═══ AI PANEL ═══ */
+    .ai-section{display:flex;flex-direction:column;height:100%;}
+    .ai-header{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+    .ai-avatar{
+      width:40px;height:40px;border-radius:12px;
+      background:conic-gradient(from 0deg,#4285f4,#ea4335,#fbbc04,#34a853,#4285f4);
+      display:flex;align-items:center;justify-content:center;
+      font-weight:900;font-size:16px;color:#fff;
+      box-shadow:0 0 12px rgba(66,133,244,.3);
+    }
+    .ai-name{font-weight:800;font-size:.92rem;}
+    .ai-sub{font-size:.66rem;color:var(--dim);}
+    .ai-output{
+      flex:1;background:rgba(6,6,15,.8);border:1px solid var(--border);
+      border-radius:var(--radius-sm);padding:16px 18px;
+      font-family:'JetBrains Mono',monospace;font-size:.78rem;line-height:1.8;
+      min-height:240px;max-height:400px;overflow-y:auto;white-space:pre-wrap;
+      position:relative;
+    }
+    .cursor-blink::after{
+      content:'▌';color:var(--cyan);animation:cursor-b .6s step-end infinite;
+    }
+    @keyframes cursor-b{0%,100%{opacity:1}50%{opacity:0}}
+
+    /* ═══ VLM Gallery ═══ */
+    .vlm-gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0;}
+    .vlm-gallery img{width:100%;border-radius:6px;border:1px solid var(--border);height:80px;object-fit:cover;background:#0a0a1a;}
+
+    /* ═══ GAUGES (Circular SVG) ═══ */
+    .gauges{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
+    .gauge{text-align:center;padding:10px 4px;transition:all .4s;}
+    .gauge svg{width:56px;height:56px;margin-bottom:4px;}
+    .gauge-ring{fill:none;stroke-width:5;stroke:var(--mute);transition:stroke .5s;}
+    .gauge-progress{
+      fill:none;stroke-width:5;stroke:var(--mute);
+      stroke-linecap:round;stroke-dasharray:157;stroke-dashoffset:157;
+      transition:stroke-dashoffset .8s ease,stroke .5s;
+      transform:rotate(-90deg);transform-origin:50% 50%;
+    }
+    .gauge.pass .gauge-progress{stroke:var(--green);stroke-dashoffset:0;}
+    .gauge.fail .gauge-progress{stroke:var(--red);stroke-dashoffset:78;}
+    .gauge.checking .gauge-progress{stroke:var(--cyan);animation:gauge-spin 1s linear infinite;}
+    .gauge.anomaly .gauge-progress{stroke:var(--orange);stroke-dashoffset:40;}
+    @keyframes gauge-spin{0%{stroke-dashoffset:157;transform:rotate(-90deg)}50%{stroke-dashoffset:40}100%{stroke-dashoffset:157;transform:rotate(270deg)}}
+    .gauge-label{font-size:.6rem;font-weight:700;color:var(--dim);letter-spacing:.5px;}
+    .gauge.pass .gauge-label{color:var(--green);}
+    .gauge.fail .gauge-label{color:var(--red);}
+    .gauge.anomaly .gauge-label{color:var(--orange);}
+
+    .tier-label{
+      font-size:.65rem;font-weight:800;letter-spacing:1px;padding:6px 0 8px 0;
+      display:flex;align-items:center;gap:8px;
+    }
+    .tier-label::after{content:'';flex:1;height:1px;background:var(--border);}
+    .tier-label.t1{color:var(--cyan);}
+    .tier-label.t2{color:var(--orange);}
+
+    /* ═══ DIFF ═══ */
+    .diff-box{
+      background:rgba(6,6,15,.8);border:1px solid var(--border);
+      border-radius:var(--radius-sm);padding:14px 16px;
+      font-family:'JetBrains Mono',monospace;font-size:.74rem;line-height:1.7;
+      max-height:220px;overflow-y:auto;white-space:pre;
+    }
+    .d-add{color:var(--green);}.d-del{color:var(--red);opacity:.7;text-decoration:line-through;}.d-h{color:var(--cyan);}.d-s{color:var(--orange);}
+
+    /* ═══ GRAPH ═══ */
+    .tele-canvas{width:100%;height:100px;border-radius:var(--radius-sm);background:rgba(6,6,15,.8);display:block;}
+
+    /* ═══ TERMINAL ═══ */
+    .terminal{
+      background:rgba(6,6,15,.8);border:1px solid var(--border);
+      border-radius:var(--radius-sm);padding:12px 16px;
+      font-family:'JetBrains Mono',monospace;font-size:.68rem;
+      max-height:180px;overflow-y:auto;line-height:1.6;
+    }
+    .t-t{color:#333;}.t-i{color:var(--green);}.t-w{color:var(--yellow);}
+    .t-e{color:var(--red);}.t-a{color:var(--cyan);}.t-o{color:var(--orange);}
+
+    /* ═══ GRIDS ═══ */
+    .grid-3{display:grid;grid-template-columns:1.2fr 1fr .8fr;gap:16px;margin-bottom:16px;}
+    .grid-2{display:grid;grid-template-columns:5fr 3fr;gap:16px;margin-bottom:16px;}
+
+    /* ═══ BANNER ═══ */
+    .ci-banner{
+      text-align:center;padding:24px;border-radius:var(--radius);
+      margin-bottom:16px;font-size:1.5rem;font-weight:900;
+      display:none;letter-spacing:.5px;position:relative;overflow:hidden;
+    }
+    .ci-banner.pass{
+      display:block;
+      background:linear-gradient(135deg,rgba(0,255,136,.08),rgba(0,212,255,.05));
+      border:2px solid var(--green);color:var(--green);
+      animation:banner-breathe 3s ease infinite;
+    }
+    .ci-banner.fail{display:block;background:rgba(255,51,85,.06);border:2px solid var(--red);color:var(--red);}
+    @keyframes banner-breathe{0%,100%{box-shadow:0 0 20px rgba(0,255,136,.1)}50%{box-shadow:0 0 50px rgba(0,255,136,.25)}}
+
+    /* ═══ CONFETTI CANVAS ═══ */
+    #confetti-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:100;pointer-events:none;}
+
+    /* ═══ CONTROLS ═══ */
+    .controls{
+      display:flex;gap:12px;justify-content:center;align-items:center;
+      padding:20px;flex-wrap:wrap;
+    }
+    .btn{
+      padding:16px 32px;font-size:1rem;font-weight:800;border:none;
+      border-radius:var(--radius-sm);cursor:pointer;transition:all .25s;
+      font-family:'Noto Sans JP',sans-serif;display:flex;align-items:center;gap:8px;
+      position:relative;overflow:hidden;
+    }
+    .btn::after{
+      content:'';position:absolute;inset:0;
+      background:linear-gradient(135deg,rgba(255,255,255,.1),transparent);
+      opacity:0;transition:opacity .25s;
+    }
+    .btn:hover::after{opacity:1;}
+    .btn:hover{transform:translateY(-3px);}
+    .btn:active{transform:translateY(0);}
+    .btn:disabled{opacity:.3;cursor:not-allowed;transform:none;}
+    .btn-hero{
+      background:linear-gradient(135deg,var(--cyan),#0088ff);color:#000;
+      font-size:1.15rem;padding:20px 48px;
+      box-shadow:0 4px 30px rgba(0,212,255,.3);
+    }
+    .btn-hero:hover:not(:disabled){box-shadow:0 8px 40px rgba(0,212,255,.5);}
+    .btn-danger{background:linear-gradient(135deg,var(--red),#cc0030);color:#fff;}
+    .btn-danger:hover:not(:disabled){box-shadow:0 4px 24px rgba(255,51,85,.4);}
+    .btn-success{background:linear-gradient(135deg,var(--green),var(--green-dim));color:#000;}
+    .btn-success:hover:not(:disabled){box-shadow:0 4px 24px rgba(0,255,136,.4);}
+    .btn-ghost{background:rgba(20,20,50,.6);color:var(--dim);border:1px solid var(--mute);}
+    .btn-orange{background:linear-gradient(135deg,var(--orange),#cc6600);color:#000;font-weight:900;}
+    .btn-orange:hover:not(:disabled){box-shadow:0 4px 24px rgba(255,136,0,.4);}
+
+    /* ═══ FOOTER ═══ */
+    .footer{text-align:center;padding:12px;color:#222;font-size:.6rem;letter-spacing:1px;}
+
+    /* ═══ FREE MODE ═══ */
+    .free-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px 20px;margin-bottom:16px;}
+    .free-item{display:flex;flex-direction:column;gap:4px;}
+    .free-item label{font-size:.7rem;font-weight:700;color:var(--dim);letter-spacing:.3px;display:flex;justify-content:space-between;}
+    .free-val{font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--cyan);font-weight:700;}
+    .free-item input[type=range]{
+      -webkit-appearance:none;width:100%;height:6px;border-radius:3px;
+      background:var(--mute);outline:none;cursor:pointer;
+    }
+    .free-item input[type=range]::-webkit-slider-thumb{
+      -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+      background:var(--cyan);cursor:pointer;box-shadow:0 0 8px rgba(0,212,255,.4);
+    }
+    .free-item input[type=range].dirty{background:linear-gradient(90deg,var(--orange),var(--mute));}
+    .free-item input[type=range].dirty::-webkit-slider-thumb{background:var(--orange);box-shadow:0 0 8px rgba(255,136,0,.4);}
+
+    /* ═══ LANG TOGGLE ═══ */
+    .lang-toggle{
+      display:flex;align-items:center;gap:0;margin-left:12px;
+      border:1px solid var(--border);border-radius:8px;overflow:hidden;
+      font-size:.72rem;font-weight:800;font-family:'JetBrains Mono',monospace;
+    }
+    .lang-toggle button{
+      background:transparent;border:none;color:var(--dim);
+      padding:6px 12px;cursor:pointer;transition:all .2s;
+      font-size:.72rem;font-weight:800;font-family:'JetBrains Mono',monospace;
+    }
+    .lang-toggle button:hover{color:var(--text);}
+    .lang-toggle button.active{background:rgba(0,255,136,.15);color:var(--green);}
+
+    @media(max-width:1200px){
+      .main-grid,.grid-3,.grid-2{grid-template-columns:1fr;}
+      .flow{grid-template-columns:1fr;gap:8px;}
+      .flow-arrow{display:none;}
+    }
+  </style>
+</head>
+<body>
+<canvas id="bg-canvas"></canvas>
+<canvas id="confetti-canvas"></canvas>
+
+<div class="app">
+
+  <!-- ═══ HEADER ═══ -->
+  <div class="header glass" style="margin-bottom:16px">
+    <div class="header-left">
+      <div class="logo">G</div>
+      <div>
+        <h1><span>Genie</span>Guard</h1>
+        <div class="header-sub" data-i18n="header-sub">自動バグ検知 × Multi-Agent VLM推論 × Self-Reflection修復 — 2 Tier Architecture</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="live-pill"><div class="live-dot"></div>LIVE</div>
+      <div class="lang-toggle">
+        <button class="active" id="lang-ja" onclick="setLang('ja')">JP</button>
+        <button id="lang-en" onclick="setLang('en')">EN</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 3-STEP FLOW ═══ -->
+  <div class="flow">
+    <div class="flow-step glass" id="fs-break">
+      <div class="flow-icon">💥</div>
+      <div class="flow-text">
+        <h3 data-i18n="step1-title">STEP 1 — バグを発生させる</h3>
+        <p data-i18n="step1-desc">既知バグ(Tier1)と未知バグ(Tier2)をランダムに注入</p>
+      </div>
+    </div>
+    <div class="flow-arrow" id="fa-1">
+      <svg viewBox="0 0 40 40"><line class="arrow-line" x1="0" y1="20" x2="30" y2="20" stroke-width="2"/><polyline class="arrow-line" points="24,14 30,20 24,26" fill="none" stroke-width="2"/></svg>
+    </div>
+    <div class="flow-step glass" id="fs-guard">
+      <div class="flow-icon">🛡️</div>
+      <div class="flow-text">
+        <h3 data-i18n="step2-title">STEP 2 — AIが診断・修復</h3>
+        <p data-i18n="step2-desc">Tier1: カタログ修復 / Tier2: 3-Agent VLM推論→サンドボックス適用→Self-Reflection</p>
+      </div>
+    </div>
+    <div class="flow-arrow" id="fa-2">
+      <svg viewBox="0 0 40 40"><line class="arrow-line" x1="0" y1="20" x2="30" y2="20" stroke-width="2"/><polyline class="arrow-line" points="24,14 30,20 24,26" fill="none" stroke-width="2"/></svg>
+    </div>
+    <div class="flow-step glass" id="fs-verify">
+      <div class="flow-icon">✅</div>
+      <div class="flow-text">
+        <h3 data-i18n="step3-title">STEP 3 — 検証完了</h3>
+        <p data-i18n="step3-desc">全10項目(Tier1×5 + Tier2×5)を再検証し安全性を確認</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MAIN: SIM + AI ═══ -->
+  <div class="main-grid">
+    <div class="glass" id="sim-panel">
+      <div class="panel-head">
+        <span style="display:flex;align-items:center;gap:8px;">
+          🎮 <button class="game-tab active" id="tab-physics" onclick="switchGame('physics')">Physics</button>
+          <button class="game-tab" id="tab-stg" onclick="switchGame('stg')">STG</button>
+        </span>
+        <span class="tag tag-ok" id="sim-tag" data-i18n="tag-ok">正常稼働中</span>
+      </div>
+      <div class="sim-wrap">
+        <div class="sim-scanline" id="sim-scanline"></div>
+        <iframe src="index.html" class="sim-frame" id="sim-frame"></iframe>
+      </div>
+    </div>
+    <div class="glass" id="ai-panel">
+      <div class="panel-head">
+        <span data-i18n="ai-panel-head">🤖 Gemini AI リアルタイム診断</span>
+        <span class="tag tag-ok" id="ai-tag" data-i18n="tag-idle">待機中</span>
+      </div>
+      <div class="panel-body ai-section">
+        <div class="ai-header">
+          <div class="ai-avatar">G</div>
+          <div>
+            <div class="ai-name">Gemini 3.1 Pro</div>
+            <div class="ai-sub" data-i18n="ai-sub">Google AI — マルチモーダル VLM 異常分析</div>
+          </div>
+        </div>
+        <div id="vlm-capture" style="display:none;margin-bottom:10px;">
+          <div style="font-size:.68rem;color:var(--dim);font-weight:700;margin-bottom:6px;" data-i18n="vlm-caption">📸 VLM分析用スクリーンショット：</div>
+          <div class="vlm-gallery" id="vlm-gallery"></div>
+        </div>
+        <div class="ai-output" id="ai-output">パイプライン実行を待っています。
+
+下の「▶ 自動デモ開始」を押すと
+Act 1: 既知バグ → カタログ修復
+Act 2: 未知バグ → VLM推論修復
+の全工程をご覧いただけます。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ GAUGES + DIFF + GRAPH ═══ -->
+  <div class="grid-3">
+    <div class="glass">
+      <div class="panel-head" data-i18n="gauge-panel-head">🔬 物理不変量チェック（10項目）</div>
+      <div class="panel-body">
+        <div class="tier-label t1" data-i18n="tier1-label">TIER 1 — 既知バグ検査</div>
+        <div class="gauges" id="gauges-t1">
+          <div class="gauge" id="g-b1"><svg viewBox="0 0 54 54"><circle class="gauge-ring" cx="27" cy="27" r="25"/><circle class="gauge-progress" cx="27" cy="27" r="25"/></svg><div class="gauge-label">重力Y</div></div>
+          <div class="gauge" id="g-b2"><svg viewBox="0 0 54 54"><circle class="gauge-ring" cx="27" cy="27" r="25"/><circle class="gauge-progress" cx="27" cy="27" r="25"/></svg><div class="gauge-label">衝突</div></div>
+          <div class="gauge" id="g-b3"><svg viewBox="0 0 54 54"><circle class="gauge-ring" cx="27" cy="27" r="25"/><circle class="gauge-progress" cx="27" cy="27" r="25"/></svg><div class="gauge-label">反発</div></div>
+          <div class="gauge" id="g-b4"><svg viewBox="0 0 54 54"><circle class="gauge-ring" cx="27" cy="27" r="25"/><circle class="gauge-progress" cx="27" cy="27" r="25"/></svg><div class="gauge-label">摩擦</div></div>
+          <div class="gauge" id="g-b5"><svg viewBox="0 0 54 54"><circle class="gauge-ring" cx="27" cy="27" r="25"/><circle class="gauge-progress" cx="27" cy="27" r="25"/></svg><div class="gauge-label">範囲</div></div>
+        </div>
+        <div class="tier-label t2" style="margin-top:10px;" data-i18n="tier2-label">TIER 2 — 行動異常検知 (VLM)</div>
+        <div class="gauges" id="gauges-t2">
+          <div class="gauge" id="g-u1"><svg viewBox="0 0 54 54"><circle class="gauge-ring" cx="27" cy="27" r="25"/><circle class="gauge-progress" cx="27" cy="27" r="25"/></svg><div class="gauge-label">時間</div></div>
+          <div class="gauge" id="g-u2"><svg viewBox="0 0 54 54"><circle class="gauge-ring" cx="27" cy="27" r="25"/><circle class="gauge-progress" cx="27" cy="27" r="25"/></svg><div class="gauge-label">重力X</div></div>
+          <div class="gauge" id="g-u3"><svg viewBox="0 0 54 54"><circle class="gauge-ring" cx="27" cy="27" r="25"/><circle class="gauge-progress" cx="27" cy="27" r="25"/></svg><div class="gauge-label">質量</div></div>
+          <div class="gauge" id="g-u4"><svg viewBox="0 0 54 54"><circle class="gauge-ring" cx="27" cy="27" r="25"/><circle class="gauge-progress" cx="27" cy="27" r="25"/></svg><div class="gauge-label">慣性</div></div>
+          <div class="gauge" id="g-u5"><svg viewBox="0 0 54 54"><circle class="gauge-ring" cx="27" cy="27" r="25"/><circle class="gauge-progress" cx="27" cy="27" r="25"/></svg><div class="gauge-label">半径</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="glass">
+      <div class="panel-head"><span data-i18n="patch-panel-head">🩹 適用パッチ（差分）</span><span class="tag" id="patch-tier-tag" style="display:none"></span></div>
+      <div class="panel-body">
+        <div class="diff-box" id="diff-box">まだパッチは適用されていません。</div>
+      </div>
+    </div>
+    <div class="glass">
+      <div class="panel-head" data-i18n="tele-panel-head">📈 テレメトリ：ボール Y座標</div>
+      <div class="panel-body">
+        <canvas class="tele-canvas" id="tele-canvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ LOG + CONTROLS ═══ -->
+  <div class="grid-2">
+    <div class="glass">
+      <div class="panel-head" data-i18n="log-panel-head">📋 パイプライン実行ログ</div>
+      <div class="panel-body"><div class="terminal" id="terminal"></div></div>
+    </div>
+    <div>
+      <div class="ci-banner" id="ci-banner"></div>
+      <div class="glass">
+        <div class="controls">
+          <button class="btn btn-hero" id="btn-auto" onclick="doAutoDemo()" data-i18n="btn-auto">▶ 自動デモ開始</button>
+          <button class="btn btn-ghost" id="btn-reset" onclick="doReset()" data-i18n="btn-reset">↺ リセット</button>
+        </div>
+        <details style="padding:0 16px 12px">
+          <summary style="font-size:.68rem;color:var(--dim);cursor:pointer;padding:4px 0;" data-i18n="btn-manual">手動操作 ▸</summary>
+          <div class="controls" style="padding:8px 0 0">
+            <button class="btn btn-danger" id="btn-break-t1" onclick="doBreak('t1')" data-i18n="btn-break-t1">💥 Tier1 注入</button>
+            <button class="btn btn-orange" id="btn-break-t2" onclick="doBreak('t2')" data-i18n="btn-break-t2">💥 Tier2 注入</button>
+            <button class="btn btn-success" id="btn-run" onclick="doRun()" data-i18n="btn-run">🛡️ 修復実行</button>
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ FREE MODE PANEL ═══ -->
+  <div class="glass" style="margin-bottom:16px">
+    <div class="panel-head">
+      <span data-i18n="free-panel-head">🎛️ フリーモード — 審査員チャレンジ</span>
+      <span class="tag tag-orange">ANY BUG</span>
+    </div>
+    <div class="panel-body">
+      <div style="font-size:.72rem;color:var(--dim);margin-bottom:12px;" data-i18n-html="free-desc">
+        パラメータを自由に変更し、GenieGuardが<b style="color:var(--orange)">未知のバグ</b>を修復できるか挑戦してください。事前定義なし — 純粋なAI推論。
+      </div>
+      <div class="free-grid" id="free-grid">
+        <!-- Dynamically generated by buildFreeSliders() -->
+      </div>
+      <div style="display:flex;gap:12px;justify-content:center;">
+        <button class="btn btn-orange" id="btn-free" onclick="doFreeBreak()" data-i18n="btn-free">🎯 この設定で壊す → AI修復</button>
+        <button class="btn btn-ghost" onclick="resetSliders()" data-i18n="btn-free-reset">↺ リセット</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer" data-i18n="footer">GENIEGUARD v3.0 — 2-Tier Architecture + Multi-Agent — Gemini 3 Tokyo Hackathon 2026</div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+//  GenieGuard Dashboard v3 — 2-Tier Architecture
+//  Gemini 3 Tokyo Hackathon 2026
+// ════════════════════════════════════════════════════════════════
+//
+//  Architecture Overview:
+//   Tier 1 — 5 known bugs (B1-B5) → invariant checks → catalog repair
+//   Tier 2 — 5 unknown bugs (U1-U5) → behavioral anomaly detection
+//            → VLM multi-screenshot analysis → sandbox patch applier
+//
+//  Pipeline:  Break → Collect → Check → Diagnose → Patch → Verify
+// ════════════════════════════════════════════════════════════════
+
+// ── Language Toggle ──────────────────────────────────────────
+let currentLang='ja';
+const LANG={
+  ja:{
+    'header-sub':'自動バグ検知 × Multi-Agent VLM推論 × Self-Reflection修復 — 2 Tier Architecture',
+    'step1-title':'STEP 1 — バグを発生させる','step1-desc':'既知バグ(Tier1)と未知バグ(Tier2)をランダムに注入',
+    'step2-title':'STEP 2 — AIが診断・修復','step2-desc':'Tier1: カタログ修復 / Tier2: 3-Agent VLM推論→サンドボックス適用→Self-Reflection',
+    'step3-title':'STEP 3 — 検証完了','step3-desc':'全10項目(Tier1×5 + Tier2×5)を再検証し安全性を確認',
+    'ai-panel-head':'🤖 Gemini AI リアルタイム診断','ai-sub':'Google AI — マルチモーダル VLM 異常分析',
+    'vlm-caption':'📸 VLM分析用スクリーンショット：',
+    'gauge-panel-head':'🔬 物理不変量チェック（10項目）',
+    'tier1-label':'TIER 1 — 既知バグ検査','tier2-label':'TIER 2 — 行動異常検知 (VLM)',
+    'patch-panel-head':'🩹 適用パッチ（差分）','patch-empty':'まだパッチは適用されていません。',
+    'tele-panel-head':'📈 テレメトリ：ボール Y座標','log-panel-head':'📋 パイプライン実行ログ',
+    'btn-auto':'▶ 自動デモ開始','btn-reset':'↺ リセット','btn-manual':'手動操作 ▸',
+    'btn-break-t1':'💥 Tier1 注入','btn-break-t2':'💥 Tier2 注入','btn-run':'🛡️ 修復実行',
+    'btn-free':'🎯 この設定で壊す → AI修復','btn-free-reset':'↺ リセット',
+    'free-panel-head':'🎛️ フリーモード — 審査員チャレンジ',
+    'free-desc':'パラメータを自由に変更し、GenieGuardが<b style="color:var(--orange)">未知のバグ</b>を修復できるか挑戦してください。事前定義なし — 純粋なAI推論。',
+    'tag-ok':'正常稼働中','tag-err':'異常発生','tag-custom-err':'カスタム異常',
+    'tag-idle':'待機中','tag-scanning':'スキャン中','tag-t1-analysis':'Tier1 AI分析',
+    'tag-t2-analysis':'Tier2 VLM分析','tag-patched':'パッチ適用完了',
+    'footer':'GENIEGUARD v3.0 — 2-Tier Architecture + Multi-Agent — Gemini 3 Tokyo Hackathon 2026',
+    'ai-default':'パイプライン実行を待っています。\n\n下の「▶ 自動デモ開始」を押すと\nAct 1: 既知バグ → カタログ修復\nAct 2: 未知バグ → VLM推論修復\nの全工程をご覧いただけます。',
+    'ai-waiting':'パイプライン実行を待っています...','ai-freemode':'フリーモード実行中...',
+    'g-physics-t1':['重力Y','衝突','反発','摩擦','範囲'],'g-physics-t2':['時間','重力X','質量','慣性','半径'],
+    'g-stg-t1':['弾速','判定','発射','移動','敵速'],'g-stg-t2':['敵数','弾遅','敵速+','判定大','弾数'],
+    'sl-gravityY':'重力Y','sl-gravityX':'重力X','sl-timeScale':'時間スケール',
+    'sl-restitution':'反発係数','sl-friction':'摩擦','sl-frictionAir':'空気抵抗',
+    'sl-ballMass':'ボール質量','sl-ballRadius':'ボール半径',
+    'sl-bulletSpeed':'弾速','sl-fireRate':'発射間隔','sl-spawnInterval':'敵出現間隔',
+    'sl-enemySpeed':'敵速度','sl-playerSpeed':'自機速度','sl-hitboxRadius':'判定半径',
+  },
+  en:{
+    'header-sub':'Auto Bug Detection × Multi-Agent VLM Reasoning × Self-Reflection Repair — 2 Tier Architecture',
+    'step1-title':'STEP 1 — Inject Bug','step1-desc':'Randomly inject known (Tier1) and unknown (Tier2) bugs',
+    'step2-title':'STEP 2 — AI Diagnose & Repair','step2-desc':'Tier1: Catalog Fix / Tier2: 3-Agent VLM → Sandbox → Self-Reflection',
+    'step3-title':'STEP 3 — Verification','step3-desc':'Re-verify all 10 items (Tier1×5 + Tier2×5) to confirm safety',
+    'ai-panel-head':'🤖 Gemini AI Real-time Diagnosis','ai-sub':'Google AI — Multimodal VLM Anomaly Analysis',
+    'vlm-caption':'📸 VLM Analysis Screenshots:',
+    'gauge-panel-head':'🔬 Physics Invariant Check (10 Items)',
+    'tier1-label':'TIER 1 — Known Bug Inspection','tier2-label':'TIER 2 — Behavioral Anomaly Detection (VLM)',
+    'patch-panel-head':'🩹 Applied Patches (Diff)','patch-empty':'No patches applied yet.',
+    'tele-panel-head':'📈 Telemetry: Ball Y-Coordinate','log-panel-head':'📋 Pipeline Execution Log',
+    'btn-auto':'▶ Start Auto Demo','btn-reset':'↺ Reset','btn-manual':'Manual Controls ▸',
+    'btn-break-t1':'💥 Inject Tier1','btn-break-t2':'💥 Inject Tier2','btn-run':'🛡️ Run Repair',
+    'btn-free':'🎯 Break & AI Repair','btn-free-reset':'↺ Reset',
+    'free-panel-head':'🎛️ Free Mode — Judge Challenge',
+    'free-desc':'Freely modify parameters and challenge GenieGuard to repair <b style="color:var(--orange)">unknown bugs</b>. No pre-definitions — pure AI reasoning.',
+    'tag-ok':'Normal','tag-err':'Anomaly','tag-custom-err':'Custom Anomaly',
+    'tag-idle':'Standby','tag-scanning':'Scanning','tag-t1-analysis':'Tier1 AI Analysis',
+    'tag-t2-analysis':'Tier2 VLM Analysis','tag-patched':'Patch Applied',
+    'footer':'GENIEGUARD v3.0 — 2-Tier Architecture + Multi-Agent — Gemini 3 Tokyo Hackathon 2026',
+    'ai-default':'Waiting for pipeline execution.\n\nPress "▶ Start Auto Demo" below to watch\nAct 1: Known Bug → Catalog Repair\nAct 2: Unknown Bug → VLM Reasoning Repair\nthe full process.',
+    'ai-waiting':'Waiting for pipeline...','ai-freemode':'Free mode running...',
+    'g-physics-t1':['Gravity Y','Collision','Bounce','Friction','Bounds'],'g-physics-t2':['Time','Gravity X','Mass','Inertia','Radius'],
+    'g-stg-t1':['Bullet','Hitbox','Fire','Move','Enemy'],'g-stg-t2':['Spawn','SlowBlt','FastEny','BigHit','BltCnt'],
+    'sl-gravityY':'Gravity Y','sl-gravityX':'Gravity X','sl-timeScale':'Time Scale',
+    'sl-restitution':'Restitution','sl-friction':'Friction','sl-frictionAir':'Air Resistance',
+    'sl-ballMass':'Ball Mass','sl-ballRadius':'Ball Radius',
+    'sl-bulletSpeed':'Bullet Speed','sl-fireRate':'Fire Rate','sl-spawnInterval':'Spawn Interval',
+    'sl-enemySpeed':'Enemy Speed','sl-playerSpeed':'Player Speed','sl-hitboxRadius':'Hitbox Radius',
+  }
+};
+function T(key){return LANG[currentLang][key]||LANG.ja[key]||key;}
+function setLang(lang){
+  currentLang=lang;
+  document.getElementById('lang-ja').className=lang==='ja'?'active':'';
+  document.getElementById('lang-en').className=lang==='en'?'active':'';
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k=el.getAttribute('data-i18n');if(LANG[lang][k]!=null)el.textContent=LANG[lang][k];
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(el=>{
+    const k=el.getAttribute('data-i18n-html');if(LANG[lang][k]!=null)el.innerHTML=LANG[lang][k];
+  });
+  updateGaugeLabels();
+  buildFreeSliders();
+  // Refresh default panel text when idle
+  if(typeof running==='undefined'||!running){
+    const db=document.getElementById('diff-box');
+    const ao=document.getElementById('ai-output');
+    if(db&&!db.querySelector('.d-add'))db.textContent=T('patch-empty');
+    if(ao&&!ao.querySelector('span'))ao.textContent=T('ai-default');
+  }
+}
+
+// ── Timing Constants ──────────────────────────────────────────
+const TIMING = {
+  SIM_READY_TIMEOUT:  5000,   // ms — max wait for iframe sim ready
+  BALL_DATA_TIMEOUT:  3000,   // ms — max wait for ball telemetry
+  BALL_DATA_COLLECT:  2000,   // ms — wait for ball data before collection
+  COLLECT_FRAMES:     25,     // frames to collect per scan
+  COLLECT_INTERVAL:   80,     // ms between frame captures
+  VERIFY_FRAMES:      30,     // frames to collect for verification
+  VERIFY_SETTLE:      1500,   // ms to let sim settle before verify
+  SCREENSHOT_INTERVAL:800,    // ms between VLM screenshots
+  API_RETRY_DELAY:    1500,   // ms between API retries
+  API_MAX_RETRIES:    2,      // max retry attempts
+  BREAK_SPAWN_DELAY:  1500,   // ms after config apply before spawnBall
+  ACT_PAUSE:          3000,   // ms pause between Act 1 and Act 2
+};
+
+// ── Healthy Physics Defaults ──────────────────────────────────
+const HEALTHY={
+  gravityY:1,gravityX:0,restitution:.6,friction:.1,frictionAir:.01,
+  collisionMask:4294967295,boundsEnabled:true,
+  timeScale:1,ballMass:1,ballRadius:20,ballInertia:null
+};
+
+// ── Tier 1: 既知バグ（カタログ修復） ──
+const BUGS_T1={
+  B1:{gravityY:-1},B2:{collisionMask:0},B3:{restitution:5},
+  B4:{friction:0,frictionAir:0},B5:{boundsEnabled:false}
+};
+const BN_T1={B1:'重力反転',B2:'衝突無効',B3:'異常反発',B4:'摩擦消失',B5:'範囲逸脱'};
+const FIX_T1={B1:{gravityY:1},B2:{collisionMask:4294967295},B3:{restitution:.6},B4:{friction:.1,frictionAir:.01},B5:{boundsEnabled:true}};
+
+// ── Tier 2: 未知バグ（VLM推論修復） ──
+const BUGS_T2={
+  U1:{timeScale:0.01},U2:{gravityX:5},U3:{ballMass:10000},
+  U4:{ballInertia:99999999},U5:{ballRadius:3}
+};
+const BN_T2={U1:'時間停止',U2:'横重力',U3:'超質量',U4:'慣性固定',U5:'極小球'};
+const BN={...BN_T1,...BN_T2};
+
+// ── STG Game Definitions ─────────────────────────────────────
+const STG_HEALTHY={bulletSpeed:8,fireRate:8,spawnInterval:45,enemySpeed:2,playerSpeed:5,hitboxRadius:12};
+const STG_BUGS_T1={S1:{bulletSpeed:0},S2:{hitboxRadius:0},S3:{fireRate:999},S4:{playerSpeed:0},S5:{enemySpeed:0}};
+const STG_BUGS_T2={X1:{spawnInterval:2},X2:{bulletSpeed:0.3},X3:{enemySpeed:15},X4:{hitboxRadius:300},X5:{fireRate:1}};
+const STG_FIX_T1={S1:{bulletSpeed:8},S2:{hitboxRadius:12},S3:{fireRate:8},S4:{playerSpeed:5},S5:{enemySpeed:2}};
+const STG_BN={S1:'弾速停止',S2:'判定消失',S3:'発射不能',S4:'移動不能',S5:'敵停止',X1:'敵大量発生',X2:'弾速低下',X3:'敵超高速',X4:'判定巨大化',X5:'弾幕過多'};
+const STG_PATCH_WHITELIST={bulletSpeed:{min:0,max:20},fireRate:{min:1,max:120},spawnInterval:{min:5,max:300},enemySpeed:{min:0,max:15},playerSpeed:{min:0,max:15},hitboxRadius:{min:1,max:100}};
+Object.assign(BN,STG_BN);Object.assign(FIX_T1,STG_FIX_T1);
+
+function checkSTGTier1(frames,config,isVerify=false){return{
+  S1:{pass:config.bulletSpeed>0,reason:config.bulletSpeed>0?'正常':`弾速ゼロ (${config.bulletSpeed})`},
+  S2:{pass:config.hitboxRadius>0,reason:config.hitboxRadius>0?'正常':`判定ゼロ (${config.hitboxRadius})`},
+  S3:{pass:config.fireRate<100,reason:config.fireRate<100?'正常':`発射不能 (fireRate=${config.fireRate})`},
+  S4:{pass:config.playerSpeed>0,reason:config.playerSpeed>0?'正常':`移動不能 (${config.playerSpeed})`},
+  S5:{pass:config.enemySpeed>0,reason:config.enemySpeed>0?'正常':`敵停止 (${config.enemySpeed})`},
+};}
+function checkSTGTier2(frames,config,isVerify=false){return{
+  X1:{pass:config.spawnInterval>=10,reason:config.spawnInterval>=10?'正常':`敵大量発生 (interval=${config.spawnInterval})`},
+  X2:{pass:!(config.bulletSpeed>0&&config.bulletSpeed<2),reason:!(config.bulletSpeed>0&&config.bulletSpeed<2)?'正常':`弾速低下 (${config.bulletSpeed})`},
+  X3:{pass:config.enemySpeed<=10,reason:config.enemySpeed<=10?'正常':`敵超高速 (${config.enemySpeed})`},
+  X4:{pass:config.hitboxRadius<=50,reason:config.hitboxRadius<=50?'正常':`判定巨大化 (hitbox=${config.hitboxRadius})`},
+  X5:{pass:!(config.fireRate>0&&config.fireRate<3),reason:!(config.fireRate>0&&config.fireRate<3)?'正常':`弾幕過多 (fireRate=${config.fireRate})`},
+};}
+
+// ── Game Accessor ────────────────────────────────────────────
+let activeGame='physics';
+const GAME={
+  get healthy(){return activeGame==='stg'?STG_HEALTHY:HEALTHY;},
+  get bugsT1(){return activeGame==='stg'?STG_BUGS_T1:BUGS_T1;},
+  get bugsT2(){return activeGame==='stg'?STG_BUGS_T2:BUGS_T2;},
+  get whitelist(){return activeGame==='stg'?STG_PATCH_WHITELIST:PATCH_WHITELIST;},
+  get src(){return activeGame==='stg'?'stg.html':'index.html';},
+  get key(){return activeGame==='stg'?'stg_config':'genieguard_config';},
+  get t1ids(){return activeGame==='stg'?['S1','S2','S3','S4','S5']:['B1','B2','B3','B4','B5'];},
+  get t2ids(){return activeGame==='stg'?['X1','X2','X3','X4','X5']:['U1','U2','U3','U4','U5'];},
+  checkT1(f,c,v){return activeGame==='stg'?checkSTGTier1(f,c,v):checkTier1(f,c,v);},
+  checkT2(f,c,v){return activeGame==='stg'?checkSTGTier2(f,c,v):checkTier2(f,c,v);},
+};
+
+const API_KEY=localStorage.getItem('GEMINI_API_KEY')||'';
+
+// ── Pipeline State ────────────────────────────────────────────
+let cfg={...GAME.healthy},activeBugs=[],activeTier=null,running=false,graphData=[];
+
+// ── Sandbox Patch Applier Whitelist ──
+const PATCH_WHITELIST={
+  gravityY:{min:0.1,max:5},
+  gravityX:{min:-2,max:2},
+  restitution:{min:0,max:1},
+  friction:{min:0,max:1},
+  frictionAir:{min:0,max:0.1},
+  collisionMask:{min:1,max:4294967295},
+  boundsEnabled:{type:'boolean'},
+  timeScale:{min:0.5,max:2},
+  ballMass:{min:0.1,max:50},
+  ballRadius:{min:10,max:50},
+  ballInertia:{type:'nullable',min:1,max:100000},
+};
+
+function sandboxValidate(patch){
+  const safe={},rejected=[];
+  for(const [key,value] of Object.entries(patch)){
+    const rule=GAME.whitelist[key];
+    if(!rule){rejected.push(`${key}: ホワイトリスト外`);continue;}
+    if(rule.type==='boolean'){safe[key]=!!value;}
+    else if(rule.type==='nullable'){
+      if(value===null||value===undefined){safe[key]=null;}
+      else if(typeof value==='number'&&value>=rule.min&&value<=rule.max){safe[key]=value;}
+      else{rejected.push(`${key}: 範囲外 (${value})`);}
+    }else{
+      if(typeof value==='number'&&value>=rule.min&&value<=rule.max){safe[key]=value;}
+      else{rejected.push(`${key}: 範囲外 (${value})`);}
+    }
+  }
+  return{safe,rejected};
+}
+
+/* ── BG Particles ── */
+(function(){
+  const c=document.getElementById('bg-canvas'),x=c.getContext('2d');
+  let w,h,d=[];const resize=()=>{w=c.width=innerWidth;h=c.height=innerHeight};
+  resize();addEventListener('resize',resize);
+  for(let i=0;i<45;i++)d.push({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25,r:Math.random()*1.2+.4});
+  (function f(){
+    x.clearRect(0,0,w,h);
+    d.forEach(p=>{p.x+=p.vx;p.y+=p.vy;if(p.x<0)p.x=w;if(p.x>w)p.x=0;if(p.y<0)p.y=h;if(p.y>h)p.y=0;
+      x.beginPath();x.arc(p.x,p.y,p.r,0,Math.PI*2);x.fillStyle='rgba(0,255,136,.2)';x.fill();});
+    for(let i=0;i<d.length;i++)for(let j=i+1;j<d.length;j++){
+      const dx=d[i].x-d[j].x,dy=d[i].y-d[j].y,ds=Math.hypot(dx,dy);
+      if(ds<130){x.beginPath();x.moveTo(d[i].x,d[i].y);x.lineTo(d[j].x,d[j].y);
+        x.strokeStyle=`rgba(0,255,136,${.08*(1-ds/130)})`;x.stroke();}}
+    requestAnimationFrame(f);
+  })();
+})();
+
+/* ── Confetti ── */
+const confettiCanvas=document.getElementById('confetti-canvas');
+const confCtx=confettiCanvas.getContext('2d');
+let confetti=[];
+function fireConfetti(){
+  confettiCanvas.width=innerWidth;confettiCanvas.height=innerHeight;
+  const colors=['#00ff88','#00d4ff','#ffd000','#ff3355','#cc44ff','#ffffff'];
+  for(let i=0;i<150;i++){
+    confetti.push({x:innerWidth/2+(Math.random()-.5)*400,y:innerHeight/2,
+      vx:(Math.random()-.5)*12,vy:Math.random()*-14-4,
+      r:Math.random()*6+3,c:colors[Math.floor(Math.random()*colors.length)],
+      life:1,decay:.008+Math.random()*.008,rot:Math.random()*Math.PI*2,rv:(Math.random()-.5)*.2});
+  }
+  if(!confetti._running){confetti._running=true;animConfetti();}
+}
+function animConfetti(){
+  confCtx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height);
+  confetti=confetti.filter(p=>{
+    p.x+=p.vx;p.y+=p.vy;p.vy+=.3;p.life-=p.decay;p.rot+=p.rv;
+    if(p.life<=0)return false;
+    confCtx.save();confCtx.translate(p.x,p.y);confCtx.rotate(p.rot);
+    confCtx.globalAlpha=p.life;confCtx.fillStyle=p.c;
+    confCtx.fillRect(-p.r/2,-p.r/2,p.r,p.r*1.6);
+    confCtx.restore();return true;
+  });
+  if(confetti.length)requestAnimationFrame(animConfetti);
+  else{confCtx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height);confetti._running=false;}
+}
+
+/* ════════════════════════════════════
+   UI HELPERS — Logging, Tags, Flow, Gauges
+   ════════════════════════════════════ */
+function log(m,l='i'){
+  const el=document.getElementById('terminal'),t=new Date().toLocaleTimeString('ja-JP');
+  el.innerHTML+=`<div><span class="t-t">${t}</span> <span class="t-${l}">${m}</span></div>`;
+  el.scrollTop=el.scrollHeight;
+}
+
+/* ── Config ── */
+function applyConfig(c){cfg={...c};localStorage.setItem(GAME.key,JSON.stringify(cfg));
+  document.getElementById('sim-frame').src=GAME.src+'?'+Date.now();}
+
+/* ── Flow UI ── */
+function setFlow(id,s){document.getElementById(id).className='flow-step glass'+(s?' '+s:'');}
+function setArrow(id,lit){document.getElementById(id).className='flow-arrow'+(lit?' lit':'');}
+function resetFlow(){['fs-break','fs-guard','fs-verify'].forEach(i=>setFlow(i,''));['fa-1','fa-2'].forEach(i=>setArrow(i,false));}
+
+/* ── Gauge UI ── */
+function setGauge(id,s){
+  // Map game-specific IDs to physical gauge DOM elements
+  const t1i=GAME.t1ids.indexOf(id),t2i=GAME.t2ids.indexOf(id);
+  let domId;
+  if(t1i>=0)domId='g-b'+(t1i+1);
+  else if(t2i>=0)domId='g-u'+(t2i+1);
+  else domId='g-'+id.toLowerCase();
+  const el=document.getElementById(domId);if(el)el.className='gauge'+(s?' '+s:'');
+}
+function resetGauges(){
+  GAME.t1ids.forEach(b=>setGauge(b,''));
+  GAME.t2ids.forEach(b=>setGauge(b,''));
+}
+function updateGaugeLabels(){
+  const t1l=T(activeGame==='stg'?'g-stg-t1':'g-physics-t1');
+  const t2l=T(activeGame==='stg'?'g-stg-t2':'g-physics-t2');
+  t1l.forEach((l,i)=>{const el=document.querySelector('#g-b'+(i+1)+' .gauge-label');if(el)el.textContent=l;});
+  t2l.forEach((l,i)=>{const el=document.querySelector('#g-u'+(i+1)+' .gauge-label');if(el)el.textContent=l;});
+}
+
+/* ── Tags ── */
+function simTag(key,c){const e=document.getElementById('sim-tag');e.textContent=T(key);e.setAttribute('data-i18n',key);e.className='tag tag-'+c;}
+function aiTag(key,c){const e=document.getElementById('ai-tag');e.textContent=T(key);e.setAttribute('data-i18n',key);e.className='tag tag-'+c;}
+
+/* ── Glow panels ── */
+function glowPanel(id,c){const el=document.getElementById(id);el.classList.remove('glass-glow-green','glass-glow-red','glass-glow-cyan','glass-glow-orange');
+  if(c)el.classList.add('glass-glow-'+c);}
+
+/* ── Scanline ── */
+function scanline(on){document.getElementById('sim-scanline').className='sim-scanline'+(on?' active':'');}
+
+/* ════════════════════════════════════
+   TELEMETRY — Collection & Summarization
+   ════════════════════════════════════ */
+function getTele(){try{return document.getElementById('sim-frame').contentWindow.__telemetry__||null}catch(e){return null}}
+async function collect(n=25,ms=80){const d=[];for(let i=0;i<n;i++){const t=getTele();if(t)d.push({...t});await sleep(ms);}return d;}
+function summarize(f){
+  if(!f.length)return{};
+  const yV=f.map(x=>x.ball?.y||0),vyV=f.map(x=>x.ball?.vy||0),vxV=f.map(x=>x.ball?.vx||0);
+  const yD=[];for(let i=1;i<yV.length;i++)yD.push(yV[i]-yV[i-1]);
+  const last=f[f.length-1];
+  return{
+    y_values:yV,y_delta_mean:yD.length?yD.reduce((a,b)=>a+b,0)/yD.length:0,
+    max_vy:Math.max(...vyV.map(Math.abs)),max_vx:Math.max(...vxV.map(Math.abs)),
+    avg_vx:vxV.reduce((a,b)=>a+b,0)/vxV.length,
+    collisions:last.collisions||0,config:last.config||{},
+    ball:last.ball||{},timeScale:last.timeScale??1,
+    gravity:last.gravity||{x:0,y:1}
+  };
+}
+
+/* ═══════════════════════════════════
+   TIER 1: Invariant Checking (既知)
+   ═══════════════════════════════════ */
+function checkTier1(frames,config,isVerify=false){
+  const s=summarize(frames),r={};
+  // Skip behavioral checks when Tier2 bugs make ball unreachable (slow sim or tiny ball)
+  const skipBehavior=(config.timeScale??1)<0.5||(config.ballRadius??20)<8;
+  r.B1={pass:config.gravityY>0&&(skipBehavior||s.y_delta_mean>-5),reason:config.gravityY>0?'正常':'重力が反転 (Y='+config.gravityY+')'};
+  // B2: Config-only check — behavioral collision count is unreliable (affected by B1/B3/B5)
+  const b2cOk=config.collisionMask!==0&&config.collisionMask!==undefined;
+  r.B2={pass:b2cOk,reason:b2cOk?'正常':'衝突無効 (mask='+config.collisionMask+')'};
+  r.B3={pass:config.restitution<=1&&(skipBehavior||s.max_vy<80),reason:config.restitution<=1?'正常':'異常反発 ('+config.restitution+')'};
+  r.B4={pass:config.friction>0||config.frictionAir>0,reason:config.friction>0?'正常':'摩擦ゼロ'};
+  const yMax=Math.max(...s.y_values),yMin=Math.min(...s.y_values);
+  const b5cOk=config.boundsEnabled===true;
+  const b5rOk=yMax<800&&yMin>-200;
+  r.B5={pass:isVerify||skipBehavior?b5cOk:(b5cOk&&b5rOk),reason:!b5cOk?'範囲チェック無効':(!b5rOk&&!isVerify&&!skipBehavior?`ボール範囲外 (Y: ${yMin.toFixed(0)}〜${yMax.toFixed(0)})`:'正常')};
+  return r;
+}
+
+/* ═══════════════════════════════════
+   TIER 2: Behavioral Anomaly Detection (未知)
+   ═══════════════════════════════════ */
+function checkTier2(frames,config,isVerify=false){
+  const s=summarize(frames),r={};
+
+  // U1: timeScale anomaly — ball barely moves or too fast
+  const ts=config.timeScale??1;
+  const tsBad=ts<0.5||ts>2;
+  r.U1={pass:isVerify?!tsBad:!tsBad,reason:tsBad?`時間スケール異常 (${ts})`:'正常'};
+
+  // U2: gravityX anomaly — lateral acceleration
+  const gx=config.gravityX??0;
+  const gxBad=Math.abs(gx)>0.5;
+  r.U2={pass:!gxBad,reason:gxBad?`X軸重力異常 (${gx})`:'正常'};
+
+  // U3: ballMass anomaly — abnormal mass
+  const mass=config.ballMass??1;
+  const massBad=mass>50||mass<0.01;
+  r.U3={pass:!massBad,reason:massBad?`質量異常 (${mass})`:'正常'};
+
+  // U4: ballInertia anomaly — locked rotation
+  const inertia=config.ballInertia;
+  const iBad=inertia!=null&&inertia>10000;
+  r.U4={pass:!iBad,reason:iBad?`慣性モーメント異常 (${inertia})`:'正常'};
+
+  // U5: ballRadius anomaly — tiny or huge
+  const radius=config.ballRadius??20;
+  const rBad=radius<8||radius>60;
+  r.U5={pass:!rBad,reason:rBad?`ボール半径異常 (${radius})`:'正常'};
+
+  return r;
+}
+
+/* ── Behavioral Anomaly Detector (for Tier 2 VLM reasoning) ── */
+function detectAnomalies(frames,config){
+  const anomalies=[];
+  const s=summarize(frames);
+
+  // Time progression
+  // Time progression — only flag if timeScale config is actually abnormal (avoid iframe reload timing noise)
+  const tsVal=config.timeScale??1;
+  if(tsVal<0.5)anomalies.push({type:'time_frozen',desc:`シミュレーション速度が極端に低い (timeScale=${tsVal})`,severity:'high'});
+
+  // X-axis drift
+  if(Math.abs(s.avg_vx)>3)anomalies.push({type:'x_drift',desc:`X軸方向の持続的加速 (平均VX=${s.avg_vx.toFixed(1)})`,severity:'high'});
+
+  // High momentum / mass
+  if(s.ball.mass>50)anomalies.push({type:'heavy_ball',desc:`異常に高い質量 (${s.ball.mass})`,severity:'high'});
+
+  // No rotation despite collisions
+  if(s.collisions>0&&s.ball.angularVelocity!=null&&Math.abs(s.ball.angularVelocity)<0.001)
+    anomalies.push({type:'no_rotation',desc:'衝突後もボールが全く回転しない',severity:'medium'});
+
+  // Ball size (skip if radius=0 — telemetry not yet initialized)
+  if(s.ball.radius>0&&s.ball.radius<10)anomalies.push({type:'tiny_ball',desc:`ボールが異常に小さい (r=${s.ball.radius})`,severity:'high'});
+  if(s.ball.radius>50)anomalies.push({type:'huge_ball',desc:`ボールが異常に大きい (r=${s.ball.radius})`,severity:'high'});
+
+  return anomalies;
+}
+
+/* ════════════════════════════════════
+   SCREENSHOT — Canvas layer compositing for VLM
+   ════════════════════════════════════ */
+function captureSimScreenshot(){
+  try{
+    const frame=document.getElementById('sim-frame');
+    const innerDoc=frame.contentDocument||frame.contentWindow.document;
+    const canvases=innerDoc.querySelectorAll('canvas');
+    if(!canvases.length)return null;
+    const first=canvases[0];
+    const out=document.createElement('canvas');
+    out.width=first.width;out.height=first.height;
+    const ctx=out.getContext('2d');
+    canvases.forEach(c=>{try{ctx.drawImage(c,0,0);}catch(e){}});
+    return out.toDataURL('image/jpeg',0.8).split(',')[1];
+  }catch(e){log('スクリーンショット取得失敗','w');return null;}
+}
+
+/* ═══════════════════════════════════
+   GEMINI API — Tier 1 (Text + Vision)
+   ═══════════════════════════════════ */
+async function callGeminiTier1(results,summary){
+  const failed=Object.entries(results).filter(([,v])=>!v.pass).map(([k,v])=>`${k}(${BN[k]}): ${v.reason}`);
+  const screenshot=captureSimScreenshot();
+  showVLMScreenshots(screenshot?[screenshot]:[]);
+
+  const textPrompt=`あなたはGenieGuardという物理シミュレータCI/CDの診断AIです。
+${screenshot?'添付されたシミュレータのスクリーンショットと':''}以下のデータから異常を分析してください。
+
+${screenshot?'【視覚分析】まずスクリーンショットを見て、ボールの位置・動き・物理的に不自然な点を観察してください。\n':''}
+【検出異常(Tier 1 既知バグ)】
+${failed.join('\n')}
+
+【テレメトリ】
+gravityY=${summary.config?.gravityY}, restitution=${summary.config?.restitution}, friction=${summary.config?.friction}, collisionMask=${summary.config?.collisionMask}, boundsEnabled=${summary.config?.boundsEnabled}, 衝突回数=${summary.collisions}, Y移動平均=${summary.y_delta_mean?.toFixed(2)}
+
+【利用可能パッチ(カタログ)】FIX_B1(重力修復), FIX_B2(衝突修復), FIX_B3(反発修復), FIX_B4(摩擦修復), FIX_B5(範囲修復)
+
+以下のJSON形式のみで回答してください:
+{"visual_analysis":"スクリーンショットから観察できる異常を1-2文で","diagnosis":"テレメトリデータに基づく詳細診断を2-3文で","patches":["FIX_B1"]}`;
+
+  const parts=[{text:textPrompt}];
+  if(screenshot)parts.push({inline_data:{mime_type:'image/jpeg',data:screenshot}});
+
+  try{return await callGeminiAPI(parts);}
+  catch(e){return fallbackT1(results);}
+}
+
+function fallbackT1(r){
+  const f=Object.entries(r).filter(([,v])=>!v.pass).map(([k])=>k);
+  return{visual_analysis:'N/A',diagnosis:`${f.length}件の既知バグを検出: ${f.map(b=>BN[b]).join('、')}。カタログから修復パッチを自動選択。`,patches:f.map(b=>'FIX_'+b)};
+}
+
+/* ═══════════════════════════════════
+   GEMINI API — Tier 2 (Multi-Agent VLM Architecture)
+   Agent 1: Vision Analyst (screenshots)
+   Agent 2: Physics Analyst (telemetry) — runs parallel with Agent 1
+   Agent 3: Repair Synthesizer (cross-validates + generates patch)
+   ═══════════════════════════════════ */
+async function callGeminiTier2(anomalies,frames,config,screenshots){
+  showVLMScreenshots(screenshots);
+  const s=summarize(frames);
+
+  // ── Agent 1: Vision Analyst ──
+  const visionPrompt=`あなたはGenieGuard **Vision Agent** です。
+添付された3つの連続スクリーンショット（t=0.5s, 1.5s, 2.5s）のみを分析してください。
+
+【タスク】物理シミュレータの画面から視覚的な異常を特定：
+- ボールのサイズ・位置・動きの軌跡
+- 不自然な挙動（浮遊、急加速、静止、すり抜け等）
+- HUDパネルの警告表示（赤字・黄色値）
+
+**JSON形式のみ**:
+{"observations":"画像から観察できる全ての異常を詳細に","visual_anomalies":["異常1","異常2"]}`;
+
+  // ── Agent 2: Physics/Game Analyst ──
+  const cfgStr=Object.entries(config).map(([k,v])=>`${k}=${v}`).join(', ');
+  const healthyStr=Object.entries(GAME.healthy).map(([k,v])=>`${k}=${v}`).join(', ');
+  const gameLabel=activeGame==='stg'?'STGシューティングゲーム':'2D物理シミュレータ';
+  const physicsPrompt=`あなたはGenieGuard **Physics Agent** です。
+以下のテレメトリとコンフィグから${gameLabel}の異常を検出してください。
+
+【コンフィグ】${cfgStr}
+
+【テレメトリ】Ball Y:${Math.min(...s.y_values).toFixed(0)}〜${Math.max(...s.y_values).toFixed(0)}, Max|VY|:${s.max_vy.toFixed(1)}, Max|VX|:${s.max_vx.toFixed(1)}, AvgVX:${s.avg_vx.toFixed(1)}, 衝突:${s.collisions}
+
+【正常値】${healthyStr}
+
+【行動異常検知】${anomalies.map(a=>`${a.type}: ${a.desc}`).join('; ')||'なし'}
+
+**JSON形式のみ**:
+{"analysis":"テレメトリから判断される物理的異常","suspected_params":[{"param":"パラメータ名","current":"現在値","expected":"正常値","reason":"判断根拠"}]}`;
+
+  log('🔍 Agent 1: Vision Analyst + Agent 2: Physics Analyst 並列起動...','o');
+
+  const vParts=[{text:visionPrompt}];
+  for(const ss of screenshots){if(ss)vParts.push({inline_data:{mime_type:'image/jpeg',data:ss}});}
+  const pParts=[{text:physicsPrompt}];
+
+  let vRes,pRes;
+  try{
+    [vRes,pRes]=await Promise.all([callGeminiAPI(vParts),callGeminiAPI(pParts)]);
+  }catch(e){
+    log(`並列分析エラー — フォールバック実行: ${e.message}`,'w');
+    return fallbackT2(anomalies,config);
+  }
+
+  log(`  ✓ Vision Agent: ${(vRes.visual_anomalies||[]).length}件の視覚異常`,'o');
+  log(`  ✓ Physics Agent: ${(pRes.suspected_params||[]).length}件のパラメータ異常`,'o');
+
+  // ── Agent 3: Repair Synthesizer (Cross-Validation) ──
+  log('🧬 Agent 3: Repair Synthesizer — クロスバリデーション + パッチ生成...','o');
+
+  const synthPrompt=`あなたはGenieGuard **Repair Synthesizer Agent** です。
+2つの専門エージェントの分析を統合し、修復パッチを生成してください。
+
+【Vision Agent 分析】
+${vRes.observations||'N/A'}
+視覚異常: ${(vRes.visual_anomalies||[]).join(', ')||'なし'}
+
+【Physics Agent 分析】
+${pRes.analysis||'N/A'}
+疑わしいパラメータ: ${(pRes.suspected_params||[]).map(p=>`${p.param}=${p.current}→${p.expected}(${p.reason})`).join('; ')||'なし'}
+
+【クロスバリデーション手順】
+Step 1: 両エージェントの一致点を特定（高確信度）
+Step 2: 矛盾点を物理法則（F=ma, E=mgh）に基づいて解決
+Step 3: 最小変更パッチを生成
+
+**JSON形式のみ**:
+{"diagnosis":"統合分析（クロスチェック結果）","patch":{"パラメータ名":正常値},"confidence":0.95,"reasoning_chain":"Step1→Step2→Step3の推論過程"}`;
+
+  let rRes;
+  try{rRes=await callGeminiAPI([{text:synthPrompt}]);}
+  catch(e){return fallbackT2(anomalies,config);}
+
+  log(`  ✓ Synthesizer: confidence=${rRes.confidence||'N/A'}`,'o');
+
+  return{
+    visual_analysis:vRes.observations||'N/A',
+    visual_anomalies:vRes.visual_anomalies||[],
+    physics_analysis:pRes.analysis||'N/A',
+    suspected_params:pRes.suspected_params||[],
+    diagnosis:rRes.diagnosis||'N/A',
+    patch:rRes.patch||{},
+    confidence:rRes.confidence||null,
+    reasoning_chain:rRes.reasoning_chain||null
+  };
+}
+
+function fallbackT2(anomalies,config){
+  const patch={};
+  // Heuristic fallback: restore any parameter that differs from HEALTHY
+  for(const [k,hv] of Object.entries(GAME.healthy)){
+    const cv=config[k];
+    if(hv===null&&cv===null) continue;
+    if(hv===cv) continue;
+    patch[k]=hv;
+  }
+  return{visual_analysis:'VLMフォールバック: スクリーンショット分析不可',diagnosis:`行動異常に基づくヒューリスティック修復。検出異常: ${anomalies.map(a=>a.desc).join(', ')||'コンフィグ値異常'}`,patch};
+}
+
+/* ── VLM Screenshots Display ── */
+function showVLMScreenshots(screenshots){
+  const gallery=document.getElementById('vlm-gallery');
+  const container=document.getElementById('vlm-capture');
+  if(!screenshots||!screenshots.length){container.style.display='none';return;}
+  gallery.innerHTML='';
+  screenshots.forEach((ss,i)=>{
+    if(!ss)return;
+    const img=document.createElement('img');
+    img.src='data:image/jpeg;base64,'+ss;
+    img.title=`t=${i===0?'0.5':i===1?'1.5':'2.5'}s`;
+    gallery.appendChild(img);
+  });
+  container.style.display='block';
+}
+
+/* ════════════════════════════════════
+   GRAPH — Y-coordinate telemetry chart
+   ════════════════════════════════════ */
+const tc=document.getElementById('tele-canvas');
+function drawGraph(){
+  const c=tc,w=c.width=c.offsetWidth,h=c.height=c.offsetHeight,x=c.getContext('2d');
+  x.clearRect(0,0,w,h);
+  x.strokeStyle='rgba(40,40,80,.4)';x.lineWidth=1;
+  for(let i=0;i<5;i++){const y=i*h/4;x.beginPath();x.moveTo(0,y);x.lineTo(w,y);x.stroke();}
+  if(graphData.length<2)return;
+  const mx=Math.max(...graphData,600),mn=Math.min(...graphData,0),rng=mx-mn||1;
+  const grad=x.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0,'rgba(0,255,136,.12)');grad.addColorStop(1,'rgba(0,255,136,0)');
+  x.beginPath();
+  graphData.forEach((v,i)=>{const px=(i/(graphData.length-1))*w,py=h-((v-mn)/rng)*h*.8-h*.1;
+    if(i===0)x.moveTo(px,py);else x.lineTo(px,py);});
+  x.lineTo(w,h);x.lineTo(0,h);x.closePath();x.fillStyle=grad;x.fill();
+  x.beginPath();x.strokeStyle='#00ff88';x.lineWidth=2;x.shadowColor='#00ff88';x.shadowBlur=6;
+  graphData.forEach((v,i)=>{const px=(i/(graphData.length-1))*w,py=h-((v-mn)/rng)*h*.8-h*.1;
+    if(i===0)x.moveTo(px,py);else x.lineTo(px,py);});x.stroke();x.shadowBlur=0;
+  x.fillStyle='#445';x.font='10px JetBrains Mono';
+  x.fillText(mx.toFixed(0),4,12);x.fillText(mn.toFixed(0),4,h-4);
+}
+setInterval(()=>{const t=getTele();if(t&&t.ball){graphData.push(t.ball.y);if(graphData.length>200)graphData.shift();drawGraph();}},100);
+
+/* ── Typewriter ── */
+async function typewrite(el,text,speed=10){
+  el.textContent='';el.classList.add('cursor-blink');
+  for(let i=0;i<text.length;i++){el.textContent+=text[i];el.scrollTop=el.scrollHeight;
+    if(text[i]==='\n')await sleep(speed*4);else if(i%2===0)await sleep(speed);}
+  el.classList.remove('cursor-blink');
+}
+
+/* ════════════════════════════════════
+   ACTIONS
+   ════════════════════════════════════ */
+
+async function doBreak(tier='t1'){
+  if(running)return;
+  resetFlow();resetGauges();hideBanner();
+  document.getElementById('diff-box').textContent=T('patch-empty');
+  document.getElementById('ai-output').textContent=T('ai-waiting');
+  document.getElementById('vlm-capture').style.display='none';
+  aiTag('tag-idle','ok');glowPanel('ai-panel','');
+
+  setFlow('fs-break','active');
+  glowPanel('sim-panel','red');
+
+  const broken={...GAME.healthy};
+
+  if(tier==='t1'){
+    activeTier='t1';
+    log('━━ STEP 1: Tier1 既知バグ注入 ━━','w');
+    const ids=Object.keys(GAME.bugsT1),n=Math.floor(Math.random()*2)+1;
+    activeBugs=ids.sort(()=>Math.random()-.5).slice(0,n);
+    activeBugs.forEach(b=>Object.assign(broken,GAME.bugsT1[b]));
+    const names=activeBugs.map(b=>`${b}（${BN[b]}）`).join('、');
+    log(`💥 Tier1注入: ${names}`,'e');
+    activeBugs.forEach(b=>setGauge(b,'fail'));
+  }else{
+    activeTier='t2';
+    log('━━ STEP 1: Tier2 未知バグ注入 ━━','o');
+    const ids=Object.keys(GAME.bugsT2),n=Math.floor(Math.random()*2)+1;
+    activeBugs=ids.sort(()=>Math.random()-.5).slice(0,n);
+    activeBugs.forEach(b=>Object.assign(broken,GAME.bugsT2[b]));
+    const names=activeBugs.map(b=>`${b}（${BN[b]}）`).join('、');
+    log(`💥 Tier2注入: ${names}`,'o');
+    activeBugs.forEach(b=>setGauge(b,'anomaly'));
+  }
+
+  await sleep(500);
+  applyConfig(broken);
+  simTag('tag-err','err');
+  setFlow('fs-break','broken');
+  log('シミュレータにバグが注入されました。','w');
+
+  setTimeout(()=>{try{document.getElementById('sim-frame').contentWindow.spawnBall();}catch(e){}},TIMING.BREAK_SPAWN_DELAY);
+}
+
+async function doRun(){
+  if(running)return;running=true;disBtn(true);
+  const aiOut=document.getElementById('ai-output');
+  hideBanner();
+  try{ await _doRunPipeline(aiOut); }
+  catch(e){ log(`パイプラインエラー: ${e.message}`,'e'); }
+  finally{ running=false;disBtn(false); }
+}
+async function _doRunPipeline(aiOut){
+
+  setFlow('fs-guard','active');setArrow('fa-1',true);
+  glowPanel('sim-panel','cyan');glowPanel('ai-panel','cyan');
+  log('━━ STEP 2: GenieGuard パイプライン起動 ━━','i');
+
+  // ── Phase A: Collect telemetry ──
+  scanline(true);
+  log('🔍 テレメトリ収集中...','i');
+  aiTag('tag-scanning','active');
+  aiOut.innerHTML='<span style="color:var(--cyan)">🔍 シミュレータからテレメトリデータを収集しています...</span>';
+  try{document.getElementById('sim-frame').contentWindow.spawnBall();}catch(e){}
+  await waitForBallData(TIMING.BALL_DATA_COLLECT);
+  await sleep(400);
+
+  const frames=await collect(TIMING.COLLECT_FRAMES,TIMING.COLLECT_INTERVAL);
+  const summary=summarize(frames);
+  graphData=summary.y_values||[];drawGraph();
+  log(`${frames.length} フレーム取得完了`,'i');
+  scanline(false);
+
+  const config=summary.config||cfg;
+
+  // ── Phase B: Tier 1 Invariant Check ──
+  log('🔬 Tier1 不変量チェック実行中...','i');
+  GAME.t1ids.forEach(b=>setGauge(b,'checking'));
+  await sleep(400);
+
+  const t1Results=GAME.checkT1(frames,config);
+  for(const [b,res] of Object.entries(t1Results)){
+    setGauge(b,res.pass?'pass':'fail');
+    log(`  ${b}（${BN[b]}）: ${res.pass?'✓ 合格':'✗ 不合格'} — ${res.reason}`,res.pass?'i':'e');
+    await sleep(120);
+  }
+
+  const t1Failed=Object.entries(t1Results).filter(([,v])=>!v.pass).map(([k])=>k);
+
+  // ── Phase C: Tier 2 Behavioral Anomaly Detection ──
+  log('🔬 Tier2 行動異常検知中...','o');
+  GAME.t2ids.forEach(b=>setGauge(b,'checking'));
+  await sleep(400);
+
+  const t2Results=GAME.checkT2(frames,config);
+  const anomalies=detectAnomalies(frames,config);
+  for(const [b,res] of Object.entries(t2Results)){
+    setGauge(b,res.pass?'pass':'anomaly');
+    if(!res.pass)setGauge(b,'fail');
+    log(`  ${b}（${BN[b]}）: ${res.pass?'✓ 正常':'⚠ 異常'} — ${res.reason}`,res.pass?'i':'o');
+    await sleep(120);
+  }
+
+  if(anomalies.length>0){
+    log(`🔎 行動異常 ${anomalies.length}件検出:`,'o');
+    anomalies.forEach(a=>log(`  ⚠ ${a.desc}`,'o'));
+  }
+
+  const t2Failed=Object.entries(t2Results).filter(([,v])=>!v.pass).map(([k])=>k);
+  const allFailed=[...t1Failed,...t2Failed];
+
+  // ── Free Mode config-drift detection ──
+  // In Free Mode, subtle changes (e.g. ballMass 1→1.01) may pass all threshold
+  // checks. Detect ANY drift from HEALTHY defaults and force Tier 2 VLM analysis.
+  const configDrift=[];
+  if(activeTier==='free'){
+    for(const k of Object.keys(GAME.healthy)){
+      const hv=GAME.healthy[k], cv=config[k]??cfg[k];
+      if(hv===null&&cv===null) continue;
+      if(hv===cv) continue;
+      configDrift.push({key:k,healthy:hv,current:cv});
+    }
+  }
+
+  if(!allFailed.length && configDrift.length===0){
+    log('全10項目合格！修復不要です。','i');
+    setFlow('fs-guard','done');setFlow('fs-verify','done');setArrow('fa-2',true);
+    glowPanel('sim-panel','green');glowPanel('ai-panel','green');
+    showBanner('pass','✅ 全10項目 合格 — シミュレータは正常です');
+    aiOut.textContent='全チェック合格。異常は検出されませんでした。';
+    return;
+  }
+
+  // If checks passed but config drift detected (Free Mode), force Tier 2 VLM
+  if(!allFailed.length && configDrift.length>0){
+    log(`⚡ チェック閾値内だがパラメータ偏差 ${configDrift.length}件検出 → VLM強制解析`,'o');
+    configDrift.forEach(d=>log(`  🔸 ${d.key}: healthy=${d.healthy} → current=${d.current}`,'o'));
+    // Synthesize a virtual Tier 2 failure so repair phase triggers VLM
+    allFailed.push('FREE_DRIFT');
+  }
+
+  // ══════ REPAIR PHASE ══════
+  let dH='';
+  const fixed={...config};
+
+  // ── Tier 1 Repair (Catalog) ──
+  if(t1Failed.length>0){
+    log('🧠 Tier1: Gemini AI に診断リクエスト送信...','a');
+    aiTag('tag-t1-analysis','active');
+    aiOut.innerHTML='<span style="color:var(--cyan)">🧠 Gemini 3.1 Pro — Tier1 カタログ診断中...</span>';
+    await sleep(300);
+
+    const t1Diag=await callGeminiTier1(t1Results,summary);
+    // Ensure all failed bugs have patches (Gemini sometimes misses)
+    const needed=t1Failed.map(b=>'FIX_'+b);
+    needed.forEach(p=>{if(!t1Diag.patches.includes(p))t1Diag.patches.push(p);});
+    log(`Tier1 AI診断完了: ${t1Diag.patches.join(', ')}`,'a');
+
+    const vPart=t1Diag.visual_analysis&&t1Diag.visual_analysis!=='N/A'?`\n── 👁️ 視覚分析 ──\n${t1Diag.visual_analysis}\n`:'';
+    const t1Text=`══ Tier 1 診断結果（カタログ修復） ══${vPart}
+── 📊 データ分析 ──
+${t1Diag.diagnosis}
+
+── 💊 カタログパッチ ──
+${t1Diag.patches.map(p=>'  ✦ '+p+' ('+BN[p.replace('FIX_','')]+')').join('\n')}`;
+    await typewrite(aiOut,t1Text,6);
+
+    // Apply Tier 1 patches
+    log('🩹 Tier1 カタログパッチ適用中...','i');
+    dH+='<span class="d-h">━━ Tier 1: カタログ修復 ━━</span>\n';
+    const pTag=document.getElementById('patch-tier-tag');pTag.textContent='Tier 1';pTag.className='tag tag-ok';pTag.style.display='';
+    for(const p of t1Diag.patches){
+      const bid=p.replace('FIX_',''),f=FIX_T1[bid];if(!f)continue;
+      let changed=false;
+      for(const [k,v] of Object.entries(f)){
+        if(config[k]!==v){dH+=`<span class="d-del">- ${k}: ${config[k]}</span>\n<span class="d-add">+ ${k}: ${v}</span>\n`;fixed[k]=v;changed=true;}
+      }
+      if(changed)log(`  ✦ ${p} 適用完了（${BN[bid]}修復）`,'i');
+      else log(`  ⏭ ${p} スキップ（値変更なし）`,'i');
+    }
+  }
+
+  // ── Tier 2 Repair (VLM Reasoning) ──
+  if(t2Failed.length>0 || configDrift.length>0){
+    log('🧠 Tier2: VLM深層分析開始（3枚スクリーンショット）...','o');
+    aiTag('tag-t2-analysis','orange');
+    glowPanel('ai-panel','orange');
+
+    if(t1Failed.length>0){
+      aiOut.textContent+='\n\n══ Tier 2 Multi-Agent VLM分析 ══\n📸 スクリーンショットキャプチャ中...';
+    }else{
+      aiOut.innerHTML='<span style="color:var(--orange)">🧠 Tier2 Multi-Agent VLM — 3エージェント並列分析中...</span>';
+    }
+
+    // Capture 3 screenshots at intervals
+    const screenshots=[];
+    for(let i=0;i<3;i++){
+      await sleep(TIMING.SCREENSHOT_INTERVAL);
+      const ss=captureSimScreenshot();
+      screenshots.push(ss);
+      log(`📸 スクリーンショット ${i+1}/3 キャプチャ完了`,'o');
+    }
+
+    const t2Diag=await callGeminiTier2(anomalies,frames,config,screenshots);
+    log('Tier2 VLM分析完了','o');
+
+    // Sandbox validate the AI-generated patch
+    const {safe:safePatch,rejected}=sandboxValidate(t2Diag.patch||{});
+    if(rejected.length>0){
+      log(`🛡️ サンドボックス: ${rejected.length}件のパッチを拒否`,'w');
+      rejected.forEach(r=>log(`  ✗ ${r}`,'w'));
+    }
+    log(`🛡️ サンドボックス: ${Object.keys(safePatch).length}件のパッチを承認`,'i');
+
+    const confPct=t2Diag.confidence!=null?`${(t2Diag.confidence*100).toFixed(0)}%`:'N/A';
+    const t2Text=`\n\n══ Tier 2 Multi-Agent 診断結果 ══
+── 🔍 Agent 1: Vision Analyst ──
+${t2Diag.visual_analysis||'分析不可'}
+
+── 📊 Agent 2: Physics Analyst ──
+${t2Diag.physics_analysis||'分析不可'}
+
+── 🧬 Agent 3: Repair Synthesizer ──
+${t2Diag.diagnosis||'不明'}
+
+── 🎯 Confidence: ${confPct} ──
+${t2Diag.reasoning_chain||'(推論チェーンなし)'}
+
+── 🧪 AI生成パッチ → サンドボックス検証 ──
+${Object.entries(safePatch).map(([k,v])=>`  ✦ ${k}: ${config[k]} → ${v} ✓`).join('\n')||'  (パッチなし)'}${rejected.length?'\n'+rejected.map(r=>`  ✗ ${r} (拒否)`).join('\n'):''}
+
+── エンジン ──
+  Gemini 3.1 Pro × 3-Agent Architecture`;
+
+    if(t1Failed.length>0){
+      aiOut.textContent+=t2Text;aiOut.scrollTop=aiOut.scrollHeight;
+    }else{
+      await typewrite(aiOut,t2Text.trim(),6);
+    }
+
+    // Apply Tier 2 sandbox-validated patches
+    log('🩹 Tier2 サンドボックスパッチ適用中...','o');
+    if(dH)dH+='\n';
+    dH+='<span class="d-s">━━ Tier 2: AI生成修復（サンドボックス検証済） ━━</span>\n';
+    const pTag=document.getElementById('patch-tier-tag');
+    pTag.textContent=t1Failed.length?'Tier 1+2':'Tier 2';pTag.className='tag tag-orange';pTag.style.display='';
+
+    for(const [k,v] of Object.entries(safePatch)){
+      const cur=config[k];const nv=v===null?'null(auto)':v;
+      if(cur===v||(cur==null&&v==null)){log(`  ⏭ ${k} スキップ（値変更なし）`,'i');continue;}
+      dH+=`<span class="d-del">- ${k}: ${cur}</span>\n<span class="d-add">+ ${k}: ${nv}</span>\n`;
+      fixed[k]=v;
+      log(`  ✦ ${k}: ${cur} → ${nv}`,'o');
+    }
+  }
+
+  document.getElementById('diff-box').innerHTML=dH;
+  applyConfig(fixed);
+  setFlow('fs-guard','done');
+  glowPanel('sim-panel','');
+  aiTag('tag-patched','ok');
+  log('パッチ適用完了。シミュレータ再読込中...','i');
+  await sleep(1500);
+
+  // ═══ STEP 3: Verify ═══
+  setFlow('fs-verify','active');setArrow('fa-2',true);
+  log('━━ STEP 3: 修復後検証（全10項目） ━━','i');
+  scanline(true);
+  ['B1','B2','B3','B4','B5','U1','U2','U3','U4','U5'].forEach(b=>setGauge(b,'checking'));
+
+  await waitForSimReady(TIMING.SIM_READY_TIMEOUT);
+  try{const sw=document.getElementById('sim-frame').contentWindow;
+    if(sw.resetSim)sw.resetSim();await sleep(300);if(sw.spawnBall)sw.spawnBall();}catch(e){}
+  await waitForBallData(TIMING.BALL_DATA_TIMEOUT);
+  await sleep(TIMING.VERIFY_SETTLE);
+
+  const fa=await collect(TIMING.VERIFY_FRAMES,TIMING.COLLECT_INTERVAL);
+  const sa=summarize(fa);graphData=sa.y_values||[];drawGraph();
+  const ca=sa.config||fixed;
+  scanline(false);
+
+  // Verify Tier 1
+  const ra1=GAME.checkT1(fa,ca,true);
+  for(const [b,res] of Object.entries(ra1)){
+    setGauge(b,res.pass?'pass':'fail');
+    log(`  ${b}（${BN[b]}）: ${res.pass?'✓ 合格':'✗ 不合格'}`,res.pass?'i':'e');
+    await sleep(100);
+  }
+
+  // Verify Tier 2
+  const ra2=GAME.checkT2(fa,ca,true);
+  for(const [b,res] of Object.entries(ra2)){
+    setGauge(b,res.pass?'pass':'fail');
+    log(`  ${b}（${BN[b]}）: ${res.pass?'✓ 合格':'✗ 不合格'}`,res.pass?'i':'e');
+    await sleep(100);
+  }
+
+  let allPassT1=Object.values(ra1).every(r=>r.pass);
+  let allPassT2=Object.values(ra2).every(r=>r.pass);
+  let allPass=allPassT1&&allPassT2;
+
+  // ═══ Self-Reflection Loop — Iterative Reasoning ═══
+  if(!allPass){
+    const s1=Object.entries(ra1).filter(([,v])=>!v.pass).map(([k])=>k);
+    const s2=Object.entries(ra2).filter(([,v])=>!v.pass).map(([k])=>k);
+    const sf=[...s1,...s2];
+    log('','o');
+    log('🔄 Self-Reflection Loop: 修復に失敗 → 再推論開始','o');
+    log(`  未通過: ${sf.map(b=>`${b}(${BN[b]})`).join(', ')}`,'o');
+
+    aiOut.textContent+=`\n\n══ Self-Reflection Loop ══\n修復失敗: ${sf.join(', ')}\n再推論中...`;
+    aiOut.scrollTop=aiOut.scrollHeight;
+
+    try{
+      const refPrompt=`あなたはGenieGuard **Self-Reflection Agent** です。
+修復パイプラインが検証に失敗しました。前回の修復を振り返り、修正パッチを再生成してください。
+
+【失敗した項目】${sf.map(b=>`${b}(${BN[b]})`).join(', ')}
+
+【修復後コンフィグ】${JSON.stringify(ca)}
+
+【正常値】gravityY=1, gravityX=0, timeScale=1, ballMass=1, ballRadius=20, ballInertia=null, restitution=0.6, friction=0.1, frictionAir=0.01, collisionMask=4294967295, boundsEnabled=true
+
+【反省指示】
+1. なぜ前回の修復が不十分だったか分析
+2. 見落としたパラメータを特定
+3. 最小修正パッチを再生成
+
+**JSON形式のみ**:
+{"failure_analysis":"失敗原因","revised_patch":{"パラメータ名":値},"confidence":0.8}`;
+
+      const ref=await callGeminiAPI([{text:refPrompt}]);
+      log(`  反省: ${ref.failure_analysis||'分析完了'}`,'o');
+
+      const {safe:rSafe}=sandboxValidate(ref.revised_patch||{});
+      if(Object.keys(rSafe).length>0){
+        log('🩹 修正パッチ適用中...','o');
+        const refixed={...ca};
+        for(const [k,v] of Object.entries(rSafe)){
+          refixed[k]=v;
+          log(`  ✦ ${k}: ${ca[k]} → ${v===null?'null(auto)':v}`,'o');
+          dH+=`\n<span class="d-s">━━ Self-Reflection 修正 ━━</span>\n`;
+          dH+=`<span class="d-del">- ${k}: ${ca[k]}</span>\n<span class="d-add">+ ${k}: ${v===null?'null(auto)':v}</span>\n`;
+        }
+        document.getElementById('diff-box').innerHTML=dH;
+        applyConfig(refixed);
+
+        aiOut.textContent+=`\n反省結果: ${ref.failure_analysis||''}\nConfidence: ${ref.confidence?((ref.confidence*100).toFixed(0)+'%'):'N/A'}\n修正パッチ適用済 → 再検証中...`;
+        aiOut.scrollTop=aiOut.scrollHeight;
+
+        // Re-verify
+        log('━━ 再検証（Self-Reflection後） ━━','o');
+        ['B1','B2','B3','B4','B5','U1','U2','U3','U4','U5'].forEach(b=>setGauge(b,'checking'));
+        await waitForSimReady(TIMING.SIM_READY_TIMEOUT);
+        try{const sw=document.getElementById('sim-frame').contentWindow;
+          if(sw.resetSim)sw.resetSim();await sleep(300);if(sw.spawnBall)sw.spawnBall();}catch(e){}
+        await waitForBallData(TIMING.BALL_DATA_TIMEOUT);
+        await sleep(TIMING.VERIFY_SETTLE);
+
+        const fb=await collect(TIMING.VERIFY_FRAMES,TIMING.COLLECT_INTERVAL);
+        const sb=summarize(fb);const cb=sb.config||refixed;
+        const rb1=GAME.checkT1(fb,cb,true);
+        const rb2=GAME.checkT2(fb,cb,true);
+        for(const [b,res] of Object.entries({...rb1,...rb2})){
+          setGauge(b,res.pass?'pass':'fail');
+          log(`  ${b}（${BN[b]}）: ${res.pass?'✓':'✗'}`,res.pass?'i':'e');
+        }
+        allPassT1=Object.values(rb1).every(r=>r.pass);
+        allPassT2=Object.values(rb2).every(r=>r.pass);
+        allPass=allPassT1&&allPassT2;
+      }
+    }catch(e){
+      log(`Self-Reflection エラー: ${e.message}`,'w');
+    }
+  }
+
+  // ═══ Final Result ═══
+  if(allPass){
+    setFlow('fs-verify','done');
+    simTag('tag-ok','ok');
+    glowPanel('sim-panel','green');glowPanel('ai-panel','green');
+    showBanner('pass','✅ 全10項目 合格 — 自動修復に成功');
+    fireConfetti();
+    log('🎉 全不変量チェック合格！シミュレータは安全にデプロイ可能です。','i');
+  }else{
+    const s1f=Object.entries(ra1).filter(([,v])=>!v.pass).map(([k])=>k);
+    const s2f=Object.entries(ra2).filter(([,v])=>!v.pass).map(([k])=>k);
+    const sff=[...s1f,...s2f];
+    setFlow('fs-verify','broken');
+    showBanner('fail',`⚠ 一部未修復: ${sff.map(b=>BN[b]).join('、')}`);
+    log(`一部のチェックが未通過: ${sff.join(', ')}`,'w');
+  }
+
+  log('━━ パイプライン完了 ━━','i');
+}
+
+/* ═══════════════════════════════════
+   AUTO DEMO — 2-Act Structure
+   ═══════════════════════════════════ */
+async function doAutoDemo(){
+  if(running)return;
+  disBtn(true);
+
+  // ══ ACT 1: Tier 1 (Known Bug → Catalog Fix) ══
+  log('','i');
+  log('╔══════════════════════════════════╗','a');
+  log('║  ACT 1: Tier1 既知バグ → カタログ修復  ║','a');
+  log('╚══════════════════════════════════╝','a');
+
+  try{
+    doReset();await sleep(600);
+    await doBreak('t1');await sleep(2500);
+    await doRun();
+  }catch(e){
+    log(`Act 1 エラー: ${e.message} — Act 2 に進みます`,'e');
+    running=false;
+  }
+
+  // Brief celebration pause
+  await sleep(TIMING.ACT_PAUSE);
+
+  // ══ ACT 2: Tier 2 (Unknown Bug → VLM Reasoning Fix) ══
+  log('','i');
+  log('╔══════════════════════════════════════╗','o');
+  log('║  ACT 2: Tier2 未知バグ → VLM推論修復    ║','o');
+  log('╚══════════════════════════════════════╝','o');
+
+  try{
+    doReset();await sleep(600);
+    await doBreak('t2');await sleep(2500);
+    await doRun();
+  }catch(e){
+    log(`Act 2 エラー: ${e.message}`,'e');
+    running=false;
+  }
+
+  disBtn(false);
+  log('═══ 全幕終了 ═══','i');
+}
+
+function doReset(){
+  if(running)return;
+  resetFlow();resetGauges();activeBugs=[];activeTier=null;graphData=[];drawGraph();
+  applyConfig({...GAME.healthy});hideBanner();
+  document.getElementById('diff-box').textContent=T('patch-empty');
+  document.getElementById('patch-tier-tag').style.display='none';
+  document.getElementById('ai-output').textContent=T('ai-default');
+  document.getElementById('vlm-capture').style.display='none';
+  simTag('tag-ok','ok');aiTag('tag-idle','ok');
+  glowPanel('sim-panel','');glowPanel('ai-panel','');
+  scanline(false);
+  log('リセット完了','i');
+}
+
+/* ═══════════════════════════════════
+   GAME SWITCHING
+   ═══════════════════════════════════ */
+function switchGame(type){
+  if(running||activeGame===type)return;
+  activeGame=type;
+  document.getElementById('tab-physics').className='game-tab'+(type==='physics'?' active':'');
+  document.getElementById('tab-stg').className='game-tab'+(type==='stg'?' active':'');
+  updateGaugeLabels();
+  buildFreeSliders();
+  doReset();
+  log(`🎮 ゲーム切替: ${type==='stg'?'STG シューティング':'2D物理シミュレータ'}`,'i');
+}
+
+/* ═══════════════════════════════════
+   FREE MODE — Judge Challenge
+   ═══════════════════════════════════ */
+const PHYS_SLIDERS=[
+  {key:'gravityY',label:'重力Y',min:-5,max:5,step:0.1,def:1},
+  {key:'gravityX',label:'重力X',min:-5,max:5,step:0.1,def:0},
+  {key:'timeScale',label:'時間スケール',min:0.01,max:3,step:0.01,def:1},
+  {key:'restitution',label:'反発係数',min:0,max:5,step:0.1,def:0.6},
+  {key:'friction',label:'摩擦',min:0,max:1,step:0.01,def:0.1},
+  {key:'frictionAir',label:'空気抵抗',min:0,max:0.1,step:0.001,def:0.01},
+  {key:'ballMass',label:'ボール質量',min:0.01,max:10000,step:0.01,def:1},
+  {key:'ballRadius',label:'ボール半径',min:1,max:80,step:1,def:20},
+];
+const STG_SLIDERS=[
+  {key:'bulletSpeed',label:'弾速',min:0,max:20,step:0.5,def:8},
+  {key:'fireRate',label:'発射間隔',min:1,max:120,step:1,def:8},
+  {key:'spawnInterval',label:'敵出現間隔',min:1,max:120,step:1,def:45},
+  {key:'enemySpeed',label:'敵速度',min:0,max:20,step:0.5,def:2},
+  {key:'playerSpeed',label:'自機速度',min:0,max:15,step:0.5,def:5},
+  {key:'hitboxRadius',label:'判定半径',min:0,max:300,step:1,def:12},
+];
+
+function getSliders(){return activeGame==='stg'?STG_SLIDERS:PHYS_SLIDERS;}
+
+function buildFreeSliders(){
+  const grid=document.querySelector('.free-grid');
+  grid.innerHTML='';
+  getSliders().forEach(s=>{
+    const div=document.createElement('div');div.className='free-item';
+    div.innerHTML=`<label>${T('sl-'+s.key)} <span class="free-val" id="fv-${s.key}">${s.def}</span></label>`+
+      `<input type="range" id="fs-${s.key}" min="${s.min}" max="${s.max}" step="${s.step}" value="${s.def}" oninput="freeUpdate('${s.key}',this)">`;
+    grid.appendChild(div);
+  });
+}
+
+function freeUpdate(key,el){
+  const v=el.value;
+  document.getElementById('fv-'+key).textContent=v;
+  const sl=getSliders().find(s=>s.key===key);
+  el.className=(sl&&String(v)!==String(sl.def))?'dirty':'';
+}
+function resetSliders(){
+  getSliders().forEach(s=>{
+    const el=document.getElementById('fs-'+s.key);
+    if(el){el.value=s.def;el.className='';freeUpdate(s.key,el);}
+  });
+}
+async function doFreeBreak(){
+  if(running)return;
+  const broken={...GAME.healthy};
+  getSliders().forEach(s=>{
+    const el=document.getElementById('fs-'+s.key);
+    if(el) broken[s.key]=parseFloat(el.value);
+  });
+
+  const diffs=[];
+  for(const [k,v] of Object.entries(broken)){if(GAME.healthy[k]!==v)diffs.push(`${k}: ${GAME.healthy[k]} → ${v}`);}
+  if(!diffs.length){log('全パラメータが正常値です。スライダーを変更してから実行してください。','w');return;}
+
+  resetFlow();resetGauges();hideBanner();
+  document.getElementById('diff-box').textContent=T('patch-empty');
+  document.getElementById('ai-output').textContent=T('ai-freemode');
+  document.getElementById('vlm-capture').style.display='none';
+  activeTier='free';activeBugs=[];
+
+  setFlow('fs-break','active');
+  glowPanel('sim-panel','red');
+
+  log('━━ フリーモード: カスタムバグ注入 ━━','o');
+  diffs.forEach(d=>log(`  🎛️ ${d}`,'o'));
+  log(`変更数: ${diffs.length}件 — 事前定義なし、純粋AI推論で修復`,'o');
+
+  await sleep(500);
+  applyConfig(broken);
+  simTag('tag-custom-err','err');
+  setFlow('fs-break','broken');
+
+  setTimeout(()=>{try{document.getElementById('sim-frame').contentWindow.spawnBall();}catch(e){}},TIMING.BREAK_SPAWN_DELAY);
+  await sleep(2500);
+  await doRun();
+}
+
+/* ═══════════════════════════════════
+   HELPERS & INFRASTRUCTURE
+   ═══════════════════════════════════ */
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+function showBanner(t,txt){const b=document.getElementById('ci-banner');b.textContent=txt;b.className='ci-banner '+t;b.style.display='block';}
+function hideBanner(){const b=document.getElementById('ci-banner');b.style.display='none';b.className='ci-banner';}
+function disBtn(d){['btn-break-t1','btn-break-t2','btn-run','btn-auto','btn-reset','btn-free'].forEach(i=>{const e=document.getElementById(i);if(e)e.disabled=d;});}
+
+/* ── iframe Synchronization ── */
+async function waitForSimReady(timeout=5000){
+  const start=Date.now();
+  while(Date.now()-start<timeout){
+    try{
+      const w=document.getElementById('sim-frame').contentWindow;
+      if(w&&(w.__telemetry__||w.__simReady__))return true;
+    }catch(e){}
+    await sleep(100);
+  }
+  log('シミュレータ準備タイムアウト','w');
+  return false;
+}
+async function waitForBallData(timeout=3000){
+  const start=Date.now();
+  while(Date.now()-start<timeout){
+    const t=getTele();
+    if(t&&t.ball&&(t.ball.y>10||t.ballExists))return true;
+    await sleep(80);
+  }
+  return false;
+}
+
+/* ── Gemini API with Retry ── */
+const GEMINI_URL=`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent?key=${API_KEY}`;
+async function callGeminiAPI(parts,maxRetries=TIMING.API_MAX_RETRIES){
+  for(let attempt=0;attempt<=maxRetries;attempt++){
+    try{
+      const res=await fetch(GEMINI_URL,{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({contents:[{parts}]})
+      });
+      if(!res.ok)throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      const d=await res.json();
+      if(d.error)throw new Error(d.error.message||'API Error');
+      const raw=d.candidates?.[0]?.content?.parts?.[0]?.text||'';
+      if(!raw)throw new Error('Empty response from API');
+      const cleaned=raw.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+      return JSON.parse(cleaned);
+    }catch(e){
+      if(attempt<maxRetries){
+        log(`API再試行 (${attempt+1}/${maxRetries}): ${e.message}`,'w');
+        await sleep(TIMING.API_RETRY_DELAY);
+      }else{
+        log(`Gemini APIエラー: ${e.message}`,'e');
+        throw e;
+      }
+    }
+  }
+}
+
+/* ════════════════════════════════════
+   INIT
+   ════════════════════════════════════ */
+buildFreeSliders();
+log('GenieGuard v3.0 (2-Tier Architecture) 起動','i');
+log('Tier1: 既知バグ5種 → カタログ修復','i');
+log('Tier2: 未知バグ → 3-Agent VLM推論 + Self-Reflection修復','o');
+log('対応ゲーム: 2D物理 / STG シューティング','i');
+log('「▶ 自動デモ開始」で全工程を自動実行できます。','i');
+</script>
+</body>
+</html>

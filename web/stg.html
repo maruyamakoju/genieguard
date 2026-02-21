@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>GenieGuard: STG Sim</title>
+<script>if(window.self===window.top)window.location.replace('dashboard.html');</script>
+<style>
+body{margin:0;overflow:hidden;background:#0a0015;}
+canvas{display:block;width:100%;height:100vh;}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+// ── GenieGuard STG Simulator ──────────────────────────────────────────────
+const DEFAULTS={bulletSpeed:8,fireRate:8,spawnInterval:45,enemySpeed:2,playerSpeed:5,hitboxRadius:12};
+let CFG;
+try{CFG=JSON.parse(localStorage.getItem('stg_config'))||{...DEFAULTS};}catch(e){CFG={...DEFAULTS};}
+
+const W=960,H=540;
+const c=document.getElementById('c');
+const ctx=c.getContext('2d');
+c.width=W;c.height=H;
+Object.assign(c.style,{width:'100%',height:'100%'});
+
+// ── State ──
+let player={x:W/2,y:H-50};
+let bullets=[];
+let enemies=[];
+let particles=[];
+let stars=Array.from({length:80},()=>({
+  x:Math.random()*W, y:Math.random()*H,
+  s:Math.random()*1.5+0.5, b:Math.random()
+}));
+let score=0,kills=0,frame=0,startTime=Date.now();
+let keys={};
+document.addEventListener('keydown',e=>{keys[e.key]=true;});
+document.addEventListener('keyup',e=>{keys[e.key]=false;});
+
+// ── Helpers ──
+function spawnExplosion(x,y){
+  const colors=['#ff3355','#ff6644','#ffaa00','#ffff44','#ffffff'];
+  for(let i=0;i<15;i++){
+    const a=Math.random()*Math.PI*2,spd=Math.random()*4+1;
+    particles.push({x,y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,
+      life:30+Math.random()*20,max:50,color:colors[i%colors.length]});
+  }
+}
+function dist(a,b){return Math.sqrt((a.x-b.x)**2+(a.y-b.y)**2);}
+
+// ── Update ──
+function update(){
+  frame++;
+  const spd=CFG.playerSpeed;
+
+  // Auto-play + manual override
+  if(keys.ArrowLeft||keys.a) player.x-=spd;
+  else if(keys.ArrowRight||keys.d) player.x+=spd;
+  else{
+    let nearX=W/2,nearD=Infinity;
+    enemies.forEach(e=>{const d=dist(player,e);if(d<nearD){nearD=d;nearX=e.x;}});
+    if(nearD<150) player.x+=(player.x>nearX?1:-1)*spd;
+    else player.x+=(W/2-player.x)*0.02;
+  }
+  player.x=Math.max(20,Math.min(W-20,player.x));
+
+  // Fire
+  const fr=Math.max(1,Math.round(CFG.fireRate));
+  if(frame%fr===0) bullets.push({x:player.x,y:player.y-18});
+
+  // Spawn enemies
+  const si=Math.max(1,Math.round(CFG.spawnInterval));
+  if(frame%si===0) enemies.push({x:50+Math.random()*(W-100),y:-20,r:14+Math.random()*6});
+
+  // Move bullets
+  bullets.forEach(b=>b.y-=CFG.bulletSpeed);
+  bullets=bullets.filter(b=>b.y>-20);
+
+  // Move enemies
+  enemies.forEach(e=>e.y+=CFG.enemySpeed);
+  enemies=enemies.filter(e=>e.y<H+30);
+
+  // Collisions
+  for(let i=bullets.length-1;i>=0;i--){
+    for(let j=enemies.length-1;j>=0;j--){
+      if(dist(bullets[i],enemies[j])<CFG.hitboxRadius){
+        spawnExplosion(enemies[j].x,enemies[j].y);
+        bullets.splice(i,1);enemies.splice(j,1);
+        score+=100;kills++;break;
+      }
+    }
+  }
+
+  // Particles
+  particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.life--;p.vy+=0.08;});
+  particles=particles.filter(p=>p.life>0);
+
+  // Stars scroll
+  stars.forEach(s=>{s.y+=s.s*0.3;if(s.y>H){s.y=0;s.x=Math.random()*W;}});
+
+  // ── Telemetry ──
+  const elapsed=(Date.now()-startTime)/1000;
+  window.__telemetry__={
+    ready:true,ballExists:true,frameDelta:16,gameType:'stg',
+    t:Math.round(elapsed*100)/100,
+    frameCount:frame,
+    ball:{x:Math.round(player.x),y:Math.round(player.y),vx:0,vy:0,mass:0,radius:0,angle:0,angularVelocity:0,inertia:0},
+    collisions:kills,
+    peakVx:0,peakVy:0,peakSpeed:0,
+    config:{...CFG},
+    stats:{score,kills,bulletsOnScreen:bullets.length,enemiesOnScreen:enemies.length},
+    errors:[]
+  };
+}
+
+// ── Draw ──
+function draw(){
+  ctx.fillStyle='#0a0015';
+  ctx.fillRect(0,0,W,H);
+
+  // Stars
+  stars.forEach(s=>{
+    const bright=0.3+0.7*Math.abs(Math.sin(frame*0.015+s.b*10));
+    ctx.fillStyle=`rgba(200,200,255,${bright*0.8})`;
+    ctx.beginPath();ctx.arc(s.x,s.y,s.s*0.6,0,Math.PI*2);ctx.fill();
+  });
+
+  // Player ship
+  ctx.save();ctx.translate(player.x,player.y);
+  ctx.shadowColor='#00ff88';ctx.shadowBlur=18;
+  ctx.fillStyle='#00ff88';
+  ctx.beginPath();ctx.moveTo(0,-18);ctx.lineTo(-15,12);ctx.lineTo(15,12);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#00cc66';
+  ctx.beginPath();ctx.moveTo(-10,8);ctx.lineTo(-18,14);ctx.lineTo(-6,10);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(10,8);ctx.lineTo(18,14);ctx.lineTo(6,10);ctx.closePath();ctx.fill();
+  ctx.shadowColor='#ff6600';ctx.shadowBlur=12;ctx.fillStyle='#ff8800';
+  const flicker=Math.random()*6;
+  ctx.beginPath();ctx.moveTo(-5,12);ctx.lineTo(0,20+flicker);ctx.lineTo(5,12);ctx.closePath();ctx.fill();
+  ctx.restore();
+
+  // Bullets
+  ctx.shadowColor='#00d4ff';ctx.shadowBlur=10;ctx.fillStyle='#00d4ff';
+  bullets.forEach(b=>{
+    ctx.beginPath();ctx.arc(b.x,b.y,3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(0,212,255,0.3)';ctx.fillRect(b.x-1,b.y,2,8);ctx.fillStyle='#00d4ff';
+  });
+
+  // Enemies
+  ctx.shadowColor='#ff3355';ctx.shadowBlur=12;
+  enemies.forEach(e=>{
+    ctx.fillStyle='#ff3355';
+    ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';ctx.fillRect(e.x-5,e.y-3,3,3);ctx.fillRect(e.x+2,e.y-3,3,3);
+    ctx.fillStyle='#000';ctx.fillRect(e.x-4,e.y-2,2,2);ctx.fillRect(e.x+3,e.y-2,2,2);
+  });
+  ctx.shadowBlur=0;
+
+  // Particles
+  particles.forEach(p=>{
+    ctx.globalAlpha=p.life/p.max;ctx.fillStyle=p.color;
+    ctx.fillRect(p.x-2,p.y-2,4,4);
+  });
+  ctx.globalAlpha=1;
+
+  drawHUD();
+}
+
+// ── HUD ──
+function drawHUD(){
+  ctx.fillStyle='rgba(0,0,0,0.75)';
+  ctx.strokeStyle='rgba(0,255,136,0.3)';ctx.lineWidth=1;
+  const pw=195,ph=290;
+  ctx.fillRect(8,8,pw,ph);ctx.strokeRect(8,8,pw,ph);
+
+  ctx.font='bold 13px monospace';ctx.fillStyle='#00ff88';
+  ctx.fillText('TELEMETRY',16,28);
+
+  ctx.font='11px monospace';let y=48;
+  const elapsed=(Date.now()-startTime)/1000;
+  ctx.fillStyle='#aaa';ctx.fillText(`t: ${elapsed.toFixed(1)}s`,16,y);y+=16;
+  ctx.fillStyle='#fff';
+  ctx.fillText(`score: ${score}`,16,y);y+=16;
+  ctx.fillText(`kills: ${kills}`,16,y);y+=16;
+  ctx.fillText(`enemies: ${enemies.length}`,16,y);y+=16;
+  ctx.fillText(`bullets: ${bullets.length}`,16,y);y+=20;
+
+  // Config with anomaly highlighting
+  const params=[
+    ['bulletSpd',CFG.bulletSpeed,DEFAULTS.bulletSpeed,v=>v<=0||v<2],
+    ['fireRate',CFG.fireRate,DEFAULTS.fireRate,v=>v>=100||v<=1],
+    ['spawnInt',CFG.spawnInterval,DEFAULTS.spawnInterval,v=>v<10],
+    ['enemySpd',CFG.enemySpeed,DEFAULTS.enemySpeed,v=>v<=0||v>10],
+    ['plyrSpd',CFG.playerSpeed,DEFAULTS.playerSpeed,v=>v<=0],
+    ['hitbox',CFG.hitboxRadius,DEFAULTS.hitboxRadius,v=>v<=0||v>50],
+  ];
+  params.forEach(([name,val,def,isAbn])=>{
+    ctx.fillStyle=isAbn(val)?'#ff3355':(val!==def?'#ffd000':'#888');
+    ctx.fillText(`${name}: ${val}`,16,y);
+    if(isAbn(val))ctx.fillText('⚠',170,y);
+    y+=16;
+  });
+
+  // Bug indicators
+  y+=8;
+  const bugs=[];
+  if(CFG.bulletSpeed<=0)bugs.push('S1');
+  if(CFG.hitboxRadius<=0)bugs.push('S2');
+  if(CFG.fireRate>=100)bugs.push('S3');
+  if(CFG.playerSpeed<=0)bugs.push('S4');
+  if(CFG.enemySpeed<=0)bugs.push('S5');
+  if(CFG.spawnInterval<10)bugs.push('X1');
+  if(CFG.bulletSpeed>0&&CFG.bulletSpeed<2)bugs.push('X2');
+  if(CFG.enemySpeed>10)bugs.push('X3');
+  if(CFG.hitboxRadius>50)bugs.push('X4');
+  if(CFG.fireRate>0&&CFG.fireRate<3)bugs.push('X5');
+
+  if(bugs.length>0){
+    ctx.fillStyle='#ff3355';ctx.font='bold 11px monospace';
+    ctx.fillText(`BUGS: ${bugs.join(', ')}`,16,y);y+=16;
+  }
+  ctx.fillStyle=bugs.length>0?'#ff3355':'#00ff88';
+  ctx.font='bold 11px monospace';
+  ctx.fillText(`STATUS: ${bugs.length>0?'BROKEN':'HEALTHY'}`,16,y);
+
+  // Tier badges
+  y+=20;
+  ctx.font='bold 9px monospace';
+  const t1=['S1','S2','S3','S4','S5'];
+  const t2=['X1','X2','X3','X4','X5'];
+  ctx.fillStyle='#666';ctx.fillText('T1:',16,y);
+  t1.forEach((id,i)=>{
+    ctx.fillStyle=bugs.includes(id)?'#ff3355':'#2a5e1e';
+    ctx.fillRect(40+i*32,y-9,28,12);
+    ctx.fillStyle=bugs.includes(id)?'#fff':'#888';
+    ctx.fillText(id,44+i*32,y);
+  });
+  y+=16;
+  ctx.fillStyle='#666';ctx.fillText('T2:',16,y);
+  t2.forEach((id,i)=>{
+    ctx.fillStyle=bugs.includes(id)?'#ff8800':'#1a3a5e';
+    ctx.fillRect(40+i*32,y-9,28,12);
+    ctx.fillStyle=bugs.includes(id)?'#fff':'#888';
+    ctx.fillText(id,44+i*32,y);
+  });
+}
+
+// ── Game Loop ──
+function loop(){update();draw();requestAnimationFrame(loop);}
+
+// ── Exports ──
+window.__simReady__=true;
+window.__telemetryReady__=true;
+window.spawnBall=()=>{};
+window.resetSim=()=>{
+  bullets=[];enemies=[];particles=[];score=0;kills=0;frame=0;startTime=Date.now();
+  player.x=W/2;
+  try{CFG=JSON.parse(localStorage.getItem('stg_config'))||{...DEFAULTS};}
+  catch(e){CFG={...DEFAULTS};}
+};
+loop();
+</script>
+</body>
+</html>

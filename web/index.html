@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GenieGuard: World-Sim CI</title>
+  <script>
+    // Redirect to dashboard if opened directly (not in iframe)
+    if(window.self===window.top){window.location.replace('dashboard.html');}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0c1525;
+      color: #ffffff;
+      margin: 0; padding: 0;
+      overflow: hidden;
+    }
+
+    /* In iframe: simulator only, no chrome */
+    header, .controls, footer { display: none; }
+    .main-container { display: block; }
+    #simulator-container { border: none; border-radius: 0; width: 100%; height: 100vh; }
+
+    header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: 2rem;
+      color: #00ff88;
+      margin-bottom: 5px;
+    }
+
+    .subtitle {
+      color: #888;
+      font-size: 0.9rem;
+    }
+
+    .main-container {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    #simulator-container {
+      border: 3px solid #00ff88;
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      padding: 20px;
+      background: #1a1a2e;
+      border-radius: 8px;
+      min-width: 200px;
+    }
+
+    .controls h2 {
+      font-size: 1.2rem;
+      color: #00ff88;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #333;
+      padding-bottom: 10px;
+    }
+
+    button {
+      padding: 12px 24px;
+      font-size: 1rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    #spawn-btn {
+      background: #e94560;
+      color: white;
+    }
+
+    #spawn-btn:hover {
+      background: #ff6b6b;
+      transform: scale(1.02);
+    }
+
+    #reset-btn {
+      background: #16213e;
+      color: #00ff88;
+      border: 2px solid #00ff88;
+    }
+
+    #reset-btn:hover {
+      background: #00ff88;
+      color: #16213e;
+    }
+
+    .status-panel {
+      margin-top: 20px;
+      padding: 15px;
+      background: #16213e;
+      border-radius: 8px;
+      width: 100%;
+    }
+
+    .status-panel h3 {
+      font-size: 0.9rem;
+      color: #888;
+      margin-bottom: 10px;
+    }
+
+    #status-text {
+      font-family: monospace;
+      font-size: 0.85rem;
+      color: #00ff88;
+      white-space: pre-wrap;
+    }
+
+    .config-display {
+      margin-top: 20px;
+      padding: 15px;
+      background: #16213e;
+      border-radius: 8px;
+      width: 100%;
+    }
+
+    .config-display h3 {
+      font-size: 0.9rem;
+      color: #888;
+      margin-bottom: 10px;
+    }
+
+    #config-text {
+      font-family: monospace;
+      font-size: 0.8rem;
+      color: #ffcc00;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      margin-left: 10px;
+    }
+
+    .badge-healthy {
+      background: #00ff88;
+      color: #000;
+    }
+
+    .badge-broken {
+      background: #ff4444;
+      color: #fff;
+    }
+
+    footer {
+      margin-top: 30px;
+      color: #555;
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>GenieGuard: World-Sim CI</h1>
+    <p class="subtitle">AI-Generated Simulator Audit & Self-Repair Pipeline</p>
+  </header>
+
+  <div class="main-container">
+    <div id="simulator-container">
+      <!-- Matter.js canvas will be inserted here -->
+    </div>
+
+    <div class="controls">
+      <h2>Controls</h2>
+      <button id="spawn-btn">Spawn Ball</button>
+      <button id="reset-btn">Reset</button>
+
+      <div class="status-panel">
+        <h3>LIVE STATUS</h3>
+        <div id="status-text">Initializing...</div>
+      </div>
+
+      <div class="config-display">
+        <h3>CURRENT CONFIG</h3>
+        <div id="config-text">Loading...</div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    GenieGuard v1.0 - World-Sim CI for AI-Generated Simulators
+  </footer>
+
+  <script type="module">
+    import { SIM_CONFIG } from './config.js';
+    import { telemetry } from './telemetry.js';
+    import './sim.js';
+
+    // Button handlers
+    document.getElementById('spawn-btn').addEventListener('click', () => {
+      if (window.spawnBall) {
+        window.spawnBall();
+        updateStatus('Ball spawned');
+      }
+    });
+
+    document.getElementById('reset-btn').addEventListener('click', () => {
+      if (window.resetSim) {
+        window.resetSim();
+        updateStatus('Simulation reset');
+      }
+    });
+
+    // Update status display
+    function updateStatus(message) {
+      const statusEl = document.getElementById('status-text');
+      const time = new Date().toLocaleTimeString();
+      statusEl.textContent = `[${time}] ${message}`;
+    }
+
+    // Update config display
+    function updateConfigDisplay() {
+      const configEl = document.getElementById('config-text');
+      const t = window.__telemetry__;
+
+      if (t && t.config) {
+        const issues = [];
+        if (t.config.gravityY < 0) issues.push('B1:GRAVITY');
+        if (t.config.collisionMask === 0) issues.push('B2:COLLISION');
+        if (t.config.restitution > 1.0) issues.push('B3:BOUNCE');
+        if (t.config.friction === 0) issues.push('B4:FRICTION');
+        if (!t.config.boundsEnabled) issues.push('B5:BOUNDS');
+
+        let text = `gravityY: ${t.config.gravityY}\n`;
+        text += `restitution: ${t.config.restitution}\n`;
+        text += `friction: ${t.config.friction}\n`;
+        text += `collisionMask: ${t.config.collisionMask}\n`;
+        text += `boundsEnabled: ${t.config.boundsEnabled}\n`;
+        text += `---\n`;
+        text += issues.length > 0 ? `BUGS: ${issues.join(', ')}` : 'STATUS: HEALTHY';
+
+        configEl.textContent = text;
+      }
+    }
+
+    // Periodic updates
+    setInterval(() => {
+      const t = window.__telemetry__;
+      if (t) {
+        const statusEl = document.getElementById('status-text');
+        statusEl.textContent = `t: ${t.t.toFixed(2)}s | `;
+        statusEl.textContent += `ball: (${t.ball.x.toFixed(0)}, ${t.ball.y.toFixed(0)}) | `;
+        statusEl.textContent += `vy: ${t.ball.vy.toFixed(1)} | `;
+        statusEl.textContent += `collisions: ${t.collisions}`;
+      }
+      updateConfigDisplay();
+    }, 100);
+
+    // Initial status
+    setTimeout(() => {
+      updateStatus('Ready - Click "Spawn Ball" to start');
+      updateConfigDisplay();
+    }, 500);
+  </script>
+</body>
+</html>

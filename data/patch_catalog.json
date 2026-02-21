@@ -1,0 +1,44 @@
+[
+  {
+    "id": "FIX_B1",
+    "bug": "B1",
+    "desc": "Restore gravity to downward (gravityY: 1)",
+    "target_file": "web/config.js",
+    "param": "gravityY",
+    "fix_value": 1
+  },
+  {
+    "id": "FIX_B2",
+    "bug": "B2",
+    "desc": "Restore collision mask to full (0xFFFFFFFF)",
+    "target_file": "web/config.js",
+    "param": "collisionMask",
+    "fix_value": 4294967295
+  },
+  {
+    "id": "FIX_B3",
+    "bug": "B3",
+    "desc": "Restore restitution to 0.6",
+    "target_file": "web/config.js",
+    "param": "restitution",
+    "fix_value": 0.6
+  },
+  {
+    "id": "FIX_B4",
+    "bug": "B4",
+    "desc": "Restore friction to 0.1 and frictionAir to 0.01",
+    "target_file": "web/config.js",
+    "params": {
+      "friction": 0.1,
+      "frictionAir": 0.01
+    }
+  },
+  {
+    "id": "FIX_B5",
+    "bug": "B5",
+    "desc": "Re-enable bounds checking",
+    "target_file": "web/config.js",
+    "param": "boundsEnabled",
+    "fix_value": true
+  }
+]
