@@ -744,7 +744,12 @@ let simulator = null;
 function initSimulator() {
   simulator = new PhysicsSimulator('simulator-container');
   window.simulator = simulator;
-  window.spawnBall = () => simulator.spawnBall();
+  // Spawn 3 balls at different positions for a richer simulation
+  window.spawnBall = () => {
+    simulator.spawnBall(200, 60);
+    simulator.spawnBall(480, 45);
+    simulator.spawnBall(760, 55);
+  };
   window.resetSim  = () => simulator.reset();
 }
 

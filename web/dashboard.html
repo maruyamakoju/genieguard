@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GenieGuard — AI自動修復パイプライン v3</title>
+  <title>GenieGuard — AI Auto-Repair Pipeline v3</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;700;900&display=swap');
     *{margin:0;padding:0;box-sizing:border-box;}
@@ -164,6 +164,14 @@
       display:flex;align-items:center;justify-content:center;
       font-weight:900;font-size:16px;color:#fff;
       box-shadow:0 0 12px rgba(66,133,244,.3);
+      transition:box-shadow .3s;
+    }
+    .ai-avatar.thinking{
+      animation:avatar-think 1.5s ease-in-out infinite;
+    }
+    @keyframes avatar-think{
+      0%,100%{box-shadow:0 0 12px rgba(66,133,244,.3),0 0 0 0 rgba(0,212,255,0)}
+      50%{box-shadow:0 0 24px rgba(66,133,244,.7),0 0 20px 4px rgba(0,212,255,.2)}
     }
     .ai-name{font-weight:800;font-size:.92rem;}
     .ai-sub{font-size:.66rem;color:var(--dim);}
@@ -342,7 +350,7 @@
       <div class="logo">G</div>
       <div>
         <h1><span>Genie</span>Guard</h1>
-        <div class="header-sub" data-i18n="header-sub">自動バグ検知 × Multi-Agent VLM推論 × Self-Reflection修復 — 2 Tier Architecture</div>
+        <div class="header-sub" data-i18n="header-sub">Auto Bug Detection × Multi-Agent VLM Reasoning × Self-Reflection Repair — 2 Tier Architecture</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:12px;">
@@ -359,8 +367,8 @@
     <div class="flow-step glass" id="fs-break">
       <div class="flow-icon">💥</div>
       <div class="flow-text">
-        <h3 data-i18n="step1-title">STEP 1 — バグを発生させる</h3>
-        <p data-i18n="step1-desc">既知バグ(Tier1)と未知バグ(Tier2)をランダムに注入</p>
+        <h3 data-i18n="step1-title">STEP 1 — Inject Bug</h3>
+        <p data-i18n="step1-desc">Randomly inject known (Tier1) and unknown (Tier2) bugs</p>
       </div>
     </div>
     <div class="flow-arrow" id="fa-1">
@@ -369,8 +377,8 @@
     <div class="flow-step glass" id="fs-guard">
       <div class="flow-icon">🛡️</div>
       <div class="flow-text">
-        <h3 data-i18n="step2-title">STEP 2 — AIが診断・修復</h3>
-        <p data-i18n="step2-desc">Tier1: カタログ修復 / Tier2: 3-Agent VLM推論→サンドボックス適用→Self-Reflection</p>
+        <h3 data-i18n="step2-title">STEP 2 — AI Diagnose &amp; Repair</h3>
+        <p data-i18n="step2-desc">Tier1: Catalog Fix / Tier2: 3-Agent VLM → Sandbox → Self-Reflection</p>
       </div>
     </div>
     <div class="flow-arrow" id="fa-2">
@@ -379,8 +387,8 @@
     <div class="flow-step glass" id="fs-verify">
       <div class="flow-icon">✅</div>
       <div class="flow-text">
-        <h3 data-i18n="step3-title">STEP 3 — 検証完了</h3>
-        <p data-i18n="step3-desc">全10項目(Tier1×5 + Tier2×5)を再検証し安全性を確認</p>
+        <h3 data-i18n="step3-title">STEP 3 — Verification</h3>
+        <p data-i18n="step3-desc">Re-verify all 10 items (Tier1×5 + Tier2×5) to confirm safety</p>
       </div>
     </div>
   </div>
@@ -393,7 +401,7 @@
           🎮 <button class="game-tab active" id="tab-physics" onclick="switchGame('physics')">Physics</button>
           <button class="game-tab" id="tab-stg" onclick="switchGame('stg')">STG</button>
         </span>
-        <span class="tag tag-ok" id="sim-tag" data-i18n="tag-ok">正常稼働中</span>
+        <span class="tag tag-ok" id="sim-tag" data-i18n="tag-ok">Normal</span>
       </div>
       <div class="sim-wrap">
         <div class="sim-scanline" id="sim-scanline"></div>
@@ -402,19 +410,19 @@
     </div>
     <div class="glass" id="ai-panel">
       <div class="panel-head">
-        <span data-i18n="ai-panel-head">🤖 Gemini AI リアルタイム診断</span>
-        <span class="tag tag-ok" id="ai-tag" data-i18n="tag-idle">待機中</span>
+        <span data-i18n="ai-panel-head">🤖 Gemini AI Real-time Diagnosis</span>
+        <span class="tag tag-ok" id="ai-tag" data-i18n="tag-idle">Standby</span>
       </div>
       <div class="panel-body ai-section">
         <div class="ai-header">
           <div class="ai-avatar">G</div>
           <div>
-            <div class="ai-name">Gemini 3.1 Pro</div>
-            <div class="ai-sub" data-i18n="ai-sub">Google AI — マルチモーダル VLM 異常分析</div>
+            <div class="ai-name">Gemini 3.1 Pro Preview</div>
+            <div class="ai-sub" data-i18n="ai-sub">Google AI — Multimodal VLM Anomaly Analysis</div>
           </div>
         </div>
         <div id="vlm-capture" style="display:none;margin-bottom:10px;">
-          <div style="font-size:.68rem;color:var(--dim);font-weight:700;margin-bottom:6px;" data-i18n="vlm-caption">📸 VLM分析用スクリーンショット：</div>
+          <div style="font-size:.68rem;color:var(--dim);font-weight:700;margin-bottom:6px;" data-i18n="vlm-caption">📸 VLM Analysis Screenshots:</div>
           <div class="vlm-gallery" id="vlm-gallery"></div>
         </div>
         <div class="ai-output" id="ai-output">Waiting for pipeline execution.
@@ -430,34 +438,34 @@ the full process.</div>
   <!-- ═══ GAUGES + DIFF + GRAPH ═══ -->
   <div class="grid-3">
     <div class="glass">
-      <div class="panel-head" data-i18n="gauge-panel-head">🔬 物理不変量チェック（10項目）</div>
+      <div class="panel-head" data-i18n="gauge-panel-head">🔬 Physics Invariant Check (10 Items)</div>
       <div class="panel-body">
-        <div class="tier-label t1" data-i18n="tier1-label">TIER 1 — 既知バグ検査</div>
+        <div class="tier-label t1" data-i18n="tier1-label">TIER 1 — Known Bug Inspection</div>
         <div class="gauges" id="gauges-t1">
-          <div class="gauge" id="g-b1"><svg viewBox="0 0 54 54"><circle class="gauge-ring" cx="27" cy="27" r="25"/><circle class="gauge-progress" cx="27" cy="27" r="25"/></svg><div class="gauge-label">重力Y</div></div>
-          <div class="gauge" id="g-b2"><svg viewBox="0 0 54 54"><circle class="gauge-ring" cx="27" cy="27" r="25"/><circle class="gauge-progress" cx="27" cy="27" r="25"/></svg><div class="gauge-label">衝突</div></div>
-          <div class="gauge" id="g-b3"><svg viewBox="0 0 54 54"><circle class="gauge-ring" cx="27" cy="27" r="25"/><circle class="gauge-progress" cx="27" cy="27" r="25"/></svg><div class="gauge-label">反発</div></div>
-          <div class="gauge" id="g-b4"><svg viewBox="0 0 54 54"><circle class="gauge-ring" cx="27" cy="27" r="25"/><circle class="gauge-progress" cx="27" cy="27" r="25"/></svg><div class="gauge-label">摩擦</div></div>
-          <div class="gauge" id="g-b5"><svg viewBox="0 0 54 54"><circle class="gauge-ring" cx="27" cy="27" r="25"/><circle class="gauge-progress" cx="27" cy="27" r="25"/></svg><div class="gauge-label">範囲</div></div>
+          <div class="gauge" id="g-b1"><svg viewBox="0 0 54 54"><circle class="gauge-ring" cx="27" cy="27" r="25"/><circle class="gauge-progress" cx="27" cy="27" r="25"/></svg><div class="gauge-label">Gravity Y</div></div>
+          <div class="gauge" id="g-b2"><svg viewBox="0 0 54 54"><circle class="gauge-ring" cx="27" cy="27" r="25"/><circle class="gauge-progress" cx="27" cy="27" r="25"/></svg><div class="gauge-label">Collision</div></div>
+          <div class="gauge" id="g-b3"><svg viewBox="0 0 54 54"><circle class="gauge-ring" cx="27" cy="27" r="25"/><circle class="gauge-progress" cx="27" cy="27" r="25"/></svg><div class="gauge-label">Bounce</div></div>
+          <div class="gauge" id="g-b4"><svg viewBox="0 0 54 54"><circle class="gauge-ring" cx="27" cy="27" r="25"/><circle class="gauge-progress" cx="27" cy="27" r="25"/></svg><div class="gauge-label">Friction</div></div>
+          <div class="gauge" id="g-b5"><svg viewBox="0 0 54 54"><circle class="gauge-ring" cx="27" cy="27" r="25"/><circle class="gauge-progress" cx="27" cy="27" r="25"/></svg><div class="gauge-label">Bounds</div></div>
         </div>
-        <div class="tier-label t2" style="margin-top:10px;" data-i18n="tier2-label">TIER 2 — 行動異常検知 (VLM)</div>
+        <div class="tier-label t2" style="margin-top:10px;" data-i18n="tier2-label">TIER 2 — Behavioral Anomaly Detection (VLM)</div>
         <div class="gauges" id="gauges-t2">
-          <div class="gauge" id="g-u1"><svg viewBox="0 0 54 54"><circle class="gauge-ring" cx="27" cy="27" r="25"/><circle class="gauge-progress" cx="27" cy="27" r="25"/></svg><div class="gauge-label">時間</div></div>
-          <div class="gauge" id="g-u2"><svg viewBox="0 0 54 54"><circle class="gauge-ring" cx="27" cy="27" r="25"/><circle class="gauge-progress" cx="27" cy="27" r="25"/></svg><div class="gauge-label">重力X</div></div>
-          <div class="gauge" id="g-u3"><svg viewBox="0 0 54 54"><circle class="gauge-ring" cx="27" cy="27" r="25"/><circle class="gauge-progress" cx="27" cy="27" r="25"/></svg><div class="gauge-label">質量</div></div>
-          <div class="gauge" id="g-u4"><svg viewBox="0 0 54 54"><circle class="gauge-ring" cx="27" cy="27" r="25"/><circle class="gauge-progress" cx="27" cy="27" r="25"/></svg><div class="gauge-label">慣性</div></div>
-          <div class="gauge" id="g-u5"><svg viewBox="0 0 54 54"><circle class="gauge-ring" cx="27" cy="27" r="25"/><circle class="gauge-progress" cx="27" cy="27" r="25"/></svg><div class="gauge-label">半径</div></div>
+          <div class="gauge" id="g-u1"><svg viewBox="0 0 54 54"><circle class="gauge-ring" cx="27" cy="27" r="25"/><circle class="gauge-progress" cx="27" cy="27" r="25"/></svg><div class="gauge-label">Time</div></div>
+          <div class="gauge" id="g-u2"><svg viewBox="0 0 54 54"><circle class="gauge-ring" cx="27" cy="27" r="25"/><circle class="gauge-progress" cx="27" cy="27" r="25"/></svg><div class="gauge-label">Gravity X</div></div>
+          <div class="gauge" id="g-u3"><svg viewBox="0 0 54 54"><circle class="gauge-ring" cx="27" cy="27" r="25"/><circle class="gauge-progress" cx="27" cy="27" r="25"/></svg><div class="gauge-label">Mass</div></div>
+          <div class="gauge" id="g-u4"><svg viewBox="0 0 54 54"><circle class="gauge-ring" cx="27" cy="27" r="25"/><circle class="gauge-progress" cx="27" cy="27" r="25"/></svg><div class="gauge-label">Inertia</div></div>
+          <div class="gauge" id="g-u5"><svg viewBox="0 0 54 54"><circle class="gauge-ring" cx="27" cy="27" r="25"/><circle class="gauge-progress" cx="27" cy="27" r="25"/></svg><div class="gauge-label">Radius</div></div>
         </div>
       </div>
     </div>
     <div class="glass">
-      <div class="panel-head"><span data-i18n="patch-panel-head">🩹 適用パッチ（差分）</span><span class="tag" id="patch-tier-tag" style="display:none"></span></div>
+      <div class="panel-head"><span data-i18n="patch-panel-head">🩹 Applied Patches (Diff)</span><span class="tag" id="patch-tier-tag" style="display:none"></span></div>
       <div class="panel-body">
-        <div class="diff-box" id="diff-box">まだパッチは適用されていません。</div>
+        <div class="diff-box" id="diff-box">No patches applied yet.</div>
       </div>
     </div>
     <div class="glass">
-      <div class="panel-head" data-i18n="tele-panel-head">📈 テレメトリ：ボール Y座標</div>
+      <div class="panel-head" data-i18n="tele-panel-head">📈 Telemetry: Ball Y-Coordinate</div>
       <div class="panel-body">
         <canvas class="tele-canvas" id="tele-canvas"></canvas>
       </div>
@@ -467,22 +475,22 @@ the full process.</div>
   <!-- ═══ LOG + CONTROLS ═══ -->
   <div class="grid-2">
     <div class="glass">
-      <div class="panel-head" data-i18n="log-panel-head">📋 パイプライン実行ログ</div>
+      <div class="panel-head" data-i18n="log-panel-head">📋 Pipeline Execution Log</div>
       <div class="panel-body"><div class="terminal" id="terminal"></div></div>
     </div>
     <div>
       <div class="ci-banner" id="ci-banner"></div>
       <div class="glass">
         <div class="controls">
-          <button class="btn btn-hero" id="btn-auto" onclick="doAutoDemo()" data-i18n="btn-auto">▶ 自動デモ開始</button>
-          <button class="btn btn-ghost" id="btn-reset" onclick="doReset()" data-i18n="btn-reset">↺ リセット</button>
+          <button class="btn btn-hero" id="btn-auto" onclick="doAutoDemo()" data-i18n="btn-auto">▶ Start Auto Demo</button>
+          <button class="btn btn-ghost" id="btn-reset" onclick="doReset()" data-i18n="btn-reset">↺ Reset</button>
         </div>
         <details style="padding:0 16px 12px">
-          <summary style="font-size:.68rem;color:var(--dim);cursor:pointer;padding:4px 0;" data-i18n="btn-manual">手動操作 ▸</summary>
+          <summary style="font-size:.68rem;color:var(--dim);cursor:pointer;padding:4px 0;" data-i18n="btn-manual">Manual Controls ▸</summary>
           <div class="controls" style="padding:8px 0 0">
-            <button class="btn btn-danger" id="btn-break-t1" onclick="doBreak('t1')" data-i18n="btn-break-t1">💥 Tier1 注入</button>
-            <button class="btn btn-orange" id="btn-break-t2" onclick="doBreak('t2')" data-i18n="btn-break-t2">💥 Tier2 注入</button>
-            <button class="btn btn-success" id="btn-run" onclick="doRun()" data-i18n="btn-run">🛡️ 修復実行</button>
+            <button class="btn btn-danger" id="btn-break-t1" onclick="doBreak('t1')" data-i18n="btn-break-t1">💥 Inject Tier1</button>
+            <button class="btn btn-orange" id="btn-break-t2" onclick="doBreak('t2')" data-i18n="btn-break-t2">💥 Inject Tier2</button>
+            <button class="btn btn-success" id="btn-run" onclick="doRun()" data-i18n="btn-run">🛡️ Run Repair</button>
           </div>
         </details>
       </div>
@@ -492,19 +500,19 @@ the full process.</div>
   <!-- ═══ FREE MODE PANEL ═══ -->
   <div class="glass" style="margin-bottom:16px">
     <div class="panel-head">
-      <span data-i18n="free-panel-head">🎛️ フリーモード — 審査員チャレンジ</span>
+      <span data-i18n="free-panel-head">🎛️ Free Mode — Judge Challenge</span>
       <span class="tag tag-orange">ANY BUG</span>
     </div>
     <div class="panel-body">
       <div style="font-size:.72rem;color:var(--dim);margin-bottom:12px;" data-i18n-html="free-desc">
-        パラメータを自由に変更し、GenieGuardが<b style="color:var(--orange)">未知のバグ</b>を修復できるか挑戦してください。事前定義なし — 純粋なAI推論。
+        Freely modify parameters and challenge GenieGuard to repair <b style="color:var(--orange)">unknown bugs</b>. No pre-definitions — pure AI reasoning.
       </div>
       <div class="free-grid" id="free-grid">
         <!-- Dynamically generated by buildFreeSliders() -->
       </div>
       <div style="display:flex;gap:12px;justify-content:center;">
-        <button class="btn btn-orange" id="btn-free" onclick="doFreeBreak()" data-i18n="btn-free">🎯 この設定で壊す → AI修復</button>
-        <button class="btn btn-ghost" onclick="resetSliders()" data-i18n="btn-free-reset">↺ リセット</button>
+        <button class="btn btn-orange" id="btn-free" onclick="doFreeBreak()" data-i18n="btn-free">🎯 Break &amp; AI Repair</button>
+        <button class="btn btn-ghost" onclick="resetSliders()" data-i18n="btn-free-reset">↺ Reset</button>
       </div>
     </div>
   </div>
@@ -965,24 +973,24 @@ function captureSimScreenshot(){
    GEMINI API — Tier 1 (Text + Vision)
    ═══════════════════════════════════ */
 async function callGeminiTier1(results,summary){
-  const failed=Object.entries(results).filter(([,v])=>!v.pass).map(([k,v])=>`${k}(${BN_JA[k]||BN[k]||k}): ${v.reason}`);
+  const failed=Object.entries(results).filter(([,v])=>!v.pass).map(([k,v])=>`${k}(${BN[k]||k}): ${v.reason}`);
   const screenshot=captureSimScreenshot();
   showVLMScreenshots(screenshot?[screenshot]:[]);
 
-  const textPrompt=`あなたはGenieGuardという物理シミュレータCI/CDの診断AIです。
-${screenshot?'添付されたシミュレータのスクリーンショットと':''}以下のデータから異常を分析してください。
+  const textPrompt=`You are GenieGuard, an AI diagnostic system for physics simulator CI/CD pipelines.
+Analyze the following data${screenshot?' and the attached simulator screenshot':''} to identify anomalies.
 
-${screenshot?'【視覚分析】まずスクリーンショットを見て、ボールの位置・動き・物理的に不自然な点を観察してください。\n':''}
-【検出異常(Tier 1 既知バグ)】
+${screenshot?'[Visual Analysis] First examine the screenshot: observe the ball position, movement trajectory, and any physically unnatural behavior.\n':''}
+[Detected Anomalies — Tier 1 Known Bugs]
 ${failed.join('\n')}
 
-【テレメトリ】
-gravityY=${summary.config?.gravityY}, restitution=${summary.config?.restitution}, friction=${summary.config?.friction}, collisionMask=${summary.config?.collisionMask}, boundsEnabled=${summary.config?.boundsEnabled}, 衝突回数=${summary.collisions}, Y移動平均=${summary.y_delta_mean?.toFixed(2)}
+[Telemetry]
+gravityY=${summary.config?.gravityY}, restitution=${summary.config?.restitution}, friction=${summary.config?.friction}, collisionMask=${summary.config?.collisionMask}, boundsEnabled=${summary.config?.boundsEnabled}, collisions=${summary.collisions}, Y-axis mean change=${summary.y_delta_mean?.toFixed(2)}
 
-【利用可能パッチ(カタログ)】FIX_B1(重力修復), FIX_B2(衝突修復), FIX_B3(反発修復), FIX_B4(摩擦修復), FIX_B5(範囲修復)
+[Available Patches (Catalog)] FIX_B1(Gravity Repair), FIX_B2(Collision Repair), FIX_B3(Bounce Repair), FIX_B4(Friction Repair), FIX_B5(Bounds Repair)
 
-以下のJSON形式のみで回答してください:
-{"visual_analysis":"スクリーンショットから観察できる異常を1-2文で","diagnosis":"テレメトリデータに基づく詳細診断を2-3文で","patches":["FIX_B1"]}`;
+Respond ONLY in the following JSON format:
+{"visual_analysis":"1-2 sentences describing observable anomalies from the screenshot","diagnosis":"2-3 sentences of detailed diagnosis based on telemetry data","patches":["FIX_B1"]}`;
 
   const parts=[{text:textPrompt}];
   if(screenshot)parts.push({inline_data:{mime_type:'image/jpeg',data:screenshot}});
@@ -993,7 +1001,7 @@ gravityY=${summary.config?.gravityY}, restitution=${summary.config?.restitution}
 
 function fallbackT1(r){
   const f=Object.entries(r).filter(([,v])=>!v.pass).map(([k])=>k);
-  return{visual_analysis:'N/A',diagnosis:`${f.length}件の既知バグを検出: ${f.map(b=>BN_JA[b]||BN[b]||b).join('、')}。カタログから修復パッチを自動選択。`,patches:f.map(b=>'FIX_'+b)};
+  return{visual_analysis:'N/A',diagnosis:`${f.length} known bug(s) detected: ${f.map(b=>BN[b]||b).join(', ')}. Auto-selecting repair patches from catalog.`,patches:f.map(b=>'FIX_'+b)};
 }
 
 /* ═══════════════════════════════════
@@ -1007,34 +1015,34 @@ async function callGeminiTier2(anomalies,frames,config,screenshots){
   const s=summarize(frames);
 
   // ── Agent 1: Vision Analyst ──
-  const visionPrompt=`あなたはGenieGuard **Vision Agent** です。
-添付された3つの連続スクリーンショット（t=0.5s, 1.5s, 2.5s）のみを分析してください。
+  const visionPrompt=`You are GenieGuard Vision Agent.
+Analyze ONLY the 3 consecutive screenshots provided (t=0.5s, 1.5s, 2.5s).
 
-【タスク】物理シミュレータの画面から視覚的な異常を特定：
-- ボールのサイズ・位置・動きの軌跡
-- 不自然な挙動（浮遊、急加速、静止、すり抜け等）
-- HUDパネルの警告表示（赤字・黄色値）
+[Task] Identify visual anomalies in the physics simulator:
+- Ball size, position, and movement trajectory
+- Unnatural behavior (floating, sudden acceleration, freeze, phase-through)
+- HUD panel warnings (red/yellow highlighted values)
 
-**JSON形式のみ**:
-{"observations":"画像から観察できる全ての異常を詳細に","visual_anomalies":["異常1","異常2"]}`;
+Respond ONLY in JSON:
+{"observations":"All observable anomalies from the images in detail","visual_anomalies":["anomaly 1","anomaly 2"]}`;
 
   // ── Agent 2: Physics/Game Analyst ──
   const cfgStr=Object.entries(config).map(([k,v])=>`${k}=${v}`).join(', ');
   const healthyStr=Object.entries(GAME.healthy).map(([k,v])=>`${k}=${v}`).join(', ');
-  const gameLabel=activeGame==='stg'?'STGシューティングゲーム':'2D物理シミュレータ';
-  const physicsPrompt=`あなたはGenieGuard **Physics Agent** です。
-以下のテレメトリとコンフィグから${gameLabel}の異常を検出してください。
+  const gameLabel=activeGame==='stg'?'STG Shooter Game':'2D Physics Simulator';
+  const physicsPrompt=`You are GenieGuard Physics Agent.
+Detect anomalies in the ${gameLabel} from the following telemetry and configuration.
 
-【コンフィグ】${cfgStr}
+[Config] ${cfgStr}
 
-【テレメトリ】Ball Y:${Math.min(...s.y_values).toFixed(0)}〜${Math.max(...s.y_values).toFixed(0)}, Max|VY|:${s.max_vy.toFixed(1)}, Max|VX|:${s.max_vx.toFixed(1)}, AvgVX:${s.avg_vx.toFixed(1)}, 衝突:${s.collisions}
+[Telemetry] Ball Y: ${Math.min(...s.y_values).toFixed(0)}~${Math.max(...s.y_values).toFixed(0)}, Max|VY|: ${s.max_vy.toFixed(1)}, Max|VX|: ${s.max_vx.toFixed(1)}, AvgVX: ${s.avg_vx.toFixed(1)}, Collisions: ${s.collisions}
 
-【正常値】${healthyStr}
+[Healthy Defaults] ${healthyStr}
 
-【行動異常検知】${anomalies.map(a=>`${a.type}: ${a.desc}`).join('; ')||'なし'}
+[Behavioral Anomaly Detection] ${anomalies.map(a=>`${a.type}: ${a.desc}`).join('; ')||'none'}
 
-**JSON形式のみ**:
-{"analysis":"テレメトリから判断される物理的異常","suspected_params":[{"param":"パラメータ名","current":"現在値","expected":"正常値","reason":"判断根拠"}]}`;
+Respond ONLY in JSON:
+{"analysis":"Physical anomalies identified from telemetry","suspected_params":[{"param":"parameter name","current":"current value","expected":"normal value","reason":"reasoning basis"}]}`;
 
   log(L('🔍 Agent 1: Vision Analyst + Agent 2: Physics Analyst running in parallel...','🔍 Agent 1: Vision Analyst + Agent 2: Physics Analyst 並列起動...'),'o');
 
@@ -1056,24 +1064,24 @@ async function callGeminiTier2(anomalies,frames,config,screenshots){
   // ── Agent 3: Repair Synthesizer (Cross-Validation) ──
   log(L('🧬 Agent 3: Repair Synthesizer — Cross-validation + patch generation...','🧬 Agent 3: Repair Synthesizer — クロスバリデーション + パッチ生成...'),'o');
 
-  const synthPrompt=`あなたはGenieGuard **Repair Synthesizer Agent** です。
-2つの専門エージェントの分析を統合し、修復パッチを生成してください。
+  const synthPrompt=`You are GenieGuard Repair Synthesizer Agent.
+Integrate the analyses from two specialist agents and generate a minimal repair patch.
 
-【Vision Agent 分析】
+[Vision Agent Analysis]
 ${vRes.observations||'N/A'}
-視覚異常: ${(vRes.visual_anomalies||[]).join(', ')||'なし'}
+Visual anomalies: ${(vRes.visual_anomalies||[]).join(', ')||'none'}
 
-【Physics Agent 分析】
+[Physics Agent Analysis]
 ${pRes.analysis||'N/A'}
-疑わしいパラメータ: ${(pRes.suspected_params||[]).map(p=>`${p.param}=${p.current}→${p.expected}(${p.reason})`).join('; ')||'なし'}
+Suspected parameters: ${(pRes.suspected_params||[]).map(p=>`${p.param}=${p.current}→${p.expected}(${p.reason})`).join('; ')||'none'}
 
-【クロスバリデーション手順】
-Step 1: 両エージェントの一致点を特定（高確信度）
-Step 2: 矛盾点を物理法則（F=ma, E=mgh）に基づいて解決
-Step 3: 最小変更パッチを生成
+[Cross-Validation Procedure]
+Step 1: Identify agreement points between both agents (high-confidence findings)
+Step 2: Resolve contradictions using physics laws (F=ma, E=mgh, conservation of energy)
+Step 3: Generate minimal change patch — only parameters confirmed by both agents
 
-**JSON形式のみ**:
-{"diagnosis":"統合分析（クロスチェック結果）","patch":{"パラメータ名":正常値},"confidence":0.95,"reasoning_chain":"Step1→Step2→Step3の推論過程"}`;
+Respond ONLY in JSON:
+{"diagnosis":"Integrated analysis result (cross-validation findings)","patch":{"parameterName":normalValue},"confidence":0.95,"reasoning_chain":"Step1→Step2→Step3 reasoning process"}`;
 
   let rRes;
   try{rRes=await callGeminiAPI([{text:synthPrompt}]);}
@@ -1102,7 +1110,7 @@ function fallbackT2(anomalies,config){
     if(hv===cv) continue;
     patch[k]=hv;
   }
-  return{visual_analysis:'VLMフォールバック: スクリーンショット分析不可',diagnosis:`行動異常に基づくヒューリスティック修復。検出異常: ${anomalies.map(a=>a.desc).join(', ')||'コンフィグ値異常'}`,patch};
+  return{visual_analysis:'VLM fallback: screenshot analysis unavailable',diagnosis:`Heuristic repair based on behavioral anomalies. Detected: ${anomalies.map(a=>a.desc).join(', ')||'config value anomaly'}`,patch};
 }
 
 /* ── VLM Screenshots Display ── */
@@ -1470,22 +1478,22 @@ ${Object.entries(safePatch).map(([k,v])=>`  ✦ ${k}: ${config[k]} → ${v} ✓`
     aiOut.scrollTop=aiOut.scrollHeight;
 
     try{
-      const refPrompt=`あなたはGenieGuard **Self-Reflection Agent** です。
-修復パイプラインが検証に失敗しました。前回の修復を振り返り、修正パッチを再生成してください。
+      const refPrompt=`You are GenieGuard Self-Reflection Agent.
+The repair pipeline failed verification. Review the previous repair and generate a corrected patch.
 
-【失敗した項目】${sf.map(b=>`${b}(${BN_JA[b]||BN[b]||b})`).join(', ')}
+[Failed Items] ${sf.map(b=>`${b}(${BN[b]||b})`).join(', ')}
 
-【修復後コンフィグ】${JSON.stringify(ca)}
+[Post-Repair Config] ${JSON.stringify(ca)}
 
-【正常値】gravityY=1, gravityX=0, timeScale=1, ballMass=1, ballRadius=20, ballInertia=null, restitution=0.6, friction=0.1, frictionAir=0.01, collisionMask=4294967295, boundsEnabled=true
+[Healthy Defaults] gravityY=1, gravityX=0, timeScale=1, ballMass=1, ballRadius=20, ballInertia=null, restitution=0.6, friction=0.1, frictionAir=0.01, collisionMask=4294967295, boundsEnabled=true
 
-【反省指示】
-1. なぜ前回の修復が不十分だったか分析
-2. 見落としたパラメータを特定
-3. 最小修正パッチを再生成
+[Reflection Instructions]
+1. Analyze why the previous repair was insufficient
+2. Identify overlooked or incorrectly repaired parameters
+3. Generate a minimal corrected patch targeting only the still-failing items
 
-**JSON形式のみ**:
-{"failure_analysis":"失敗原因","revised_patch":{"パラメータ名":値},"confidence":0.8}`;
+Respond ONLY in JSON:
+{"failure_analysis":"Root cause of repair failure","revised_patch":{"parameterName":value},"confidence":0.8}`;
 
       const ref=await callGeminiAPI([{text:refPrompt}]);
       log(`  ${R('Reflection','反省')}: ${ref.failure_analysis||R('Analysis complete','分析完了')}`,'o');
@@ -1740,28 +1748,34 @@ async function waitForBallData(timeout=3000){
 /* ── Gemini API with Retry ── */
 const GEMINI_URL=`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent?key=${API_KEY}`;
 async function callGeminiAPI(parts,maxRetries=TIMING.API_MAX_RETRIES){
-  for(let attempt=0;attempt<=maxRetries;attempt++){
-    try{
-      const res=await fetch(GEMINI_URL,{
-        method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({contents:[{parts}]})
-      });
-      if(!res.ok)throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-      const d=await res.json();
-      if(d.error)throw new Error(d.error.message||'API Error');
-      const raw=d.candidates?.[0]?.content?.parts?.[0]?.text||'';
-      if(!raw)throw new Error('Empty response from API');
-      const cleaned=raw.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
-      return JSON.parse(cleaned);
-    }catch(e){
-      if(attempt<maxRetries){
-        log(`${R('API retry','API再試行')} (${attempt+1}/${maxRetries}): ${e.message}`,'w');
-        await sleep(TIMING.API_RETRY_DELAY);
-      }else{
-        log(`${R('Gemini API error','Gemini APIエラー')}: ${e.message}`,'e');
-        throw e;
+  const avatar=document.querySelector('.ai-avatar');
+  if(avatar)avatar.classList.add('thinking');
+  try{
+    for(let attempt=0;attempt<=maxRetries;attempt++){
+      try{
+        const res=await fetch(GEMINI_URL,{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({contents:[{parts}]})
+        });
+        if(!res.ok)throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        const d=await res.json();
+        if(d.error)throw new Error(d.error.message||'API Error');
+        const raw=d.candidates?.[0]?.content?.parts?.[0]?.text||'';
+        if(!raw)throw new Error('Empty response from API');
+        const cleaned=raw.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+        return JSON.parse(cleaned);
+      }catch(e){
+        if(attempt<maxRetries){
+          log(`${R('API retry','API再試行')} (${attempt+1}/${maxRetries}): ${e.message}`,'w');
+          await sleep(TIMING.API_RETRY_DELAY);
+        }else{
+          log(`${R('Gemini API error','Gemini APIエラー')}: ${e.message}`,'e');
+          throw e;
+        }
       }
     }
+  }finally{
+    if(avatar)avatar.classList.remove('thinking');
   }
 }
 
