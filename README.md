@@ -1,137 +1,198 @@
 # GenieGuard: World-Sim CI
 
-**AI生成シミュレータの「出荷前」自動監査・自己修復・再検証を回す閉ループCIエージェント**
+**A closed-loop CI pipeline that automatically audits and self-repairs physics in AI-generated games/simulators.**
+
+GenieGuard injects physics bugs into a Matter.js world or an STG shooter, collects telemetry + screenshots, and diagnoses issues with Gemini 3.1 Pro Preview via a **2-Tier architecture**:
+
+- **Tier 1** applies catalog patches for known bugs
+- **Tier 2** uses a multi-agent VLM workflow — a **Vision Analyst** (screenshots) and a **Physics Analyst** (telemetry/config) run in parallel, then a **Repair Synthesizer** cross-validates findings to output a safe JSON patch (config diffs only, no code generation)
+
+Patches are gated by a **sandbox** (whitelist + value-range validation), the sim auto-reloads, and the system re-verifies all 10 invariants. If verification fails, GenieGuard runs a **self-reflection loop** to re-diagnose and retry.
+
+Result: a closed-loop CI step that turns "physics hallucinations" into a deterministic, repeatable QA + repair workflow for game developers.
+
+---
+
+## Live Dashboard Demo
+
+Open `web/dashboard.html` in a browser and press **"Start Auto Demo"**.
+
+The dashboard features a **JP/EN language toggle** for international demos.
+
+### Demo Flow
+
+```
+Act 1: Known Bug → Tier 1 Catalog Repair
+Act 2: Unknown Bug → Tier 2 Multi-Agent VLM Reasoning + Self-Reflection
+```
+
+### Free Mode — Judge Challenge
+
+Manually adjust any physics parameter via sliders and challenge GenieGuard to repair it with pure AI reasoning (no pre-defined patches).
+
+---
 
 ## Quick Start
 
-### 1. 依存関係のインストール
+### 1. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 playwright install chromium
 ```
 
-### 2. 開発サーバーの起動
+### 2. Start the dev server
 
 ```bash
 python server.py
 ```
 
-ブラウザで http://localhost:8080 が開きます。
+Opens http://localhost:8080 in your browser.
 
-### 3. デモの実行
+### 3. Run the demo
 
-**方法A: ダッシュボードUI**
+**Option A: Dashboard UI**
 ```bash
 python server.py --dashboard
 ```
-「Random Break」→「Run GenieGuard」の順にクリック
+Click "Random Break" → "Run GenieGuard"
 
-**方法B: CLI**
+**Option B: CLI**
 ```bash
-# ランダムに壊す
+# Random break
 python break.py
 
-# GenieGuardを実行（自動検知・修復・検証）
+# Run GenieGuard (auto detect → repair → verify)
 python genieguard.py --no-break
 
-# または一括実行（破壊から検証まで）
+# Or full pipeline (break → detect → repair → verify)
 python genieguard.py
 ```
 
-## プロジェクト構成
+---
+
+## Architecture
 
 ```
-0221a/
-├── web/                    # Webシミュレータ
-│   ├── index.html          # シミュレータUI
-│   ├── dashboard.html      # デモダッシュボード
-│   ├── sim.js              # Matter.js物理シミュレーション
-│   ├── config.js           # 物理パラメータ（修復対象）
-│   ├── telemetry.js        # テレメトリシステム
-│   └── hud.js              # HUDオーバーレイ
+┌─────────────────────────────────────────────────────────┐
+│                    GenieGuard Pipeline                   │
+├──────────┬──────────────────────────────────────────────┤
+│  STEP 1  │  Inject Bug (Tier1 known / Tier2 unknown)   │
+├──────────┼──────────────────────────────────────────────┤
+│  STEP 2  │  Collect Telemetry + Screenshots             │
+│          │  ├─ Tier 1: Invariant Check → Catalog Patch  │
+│          │  └─ Tier 2: 3-Agent VLM → Sandbox Patch      │
+│          │       ├─ Agent 1: Vision Analyst (parallel)   │
+│          │       ├─ Agent 2: Physics Analyst (parallel)  │
+│          │       └─ Agent 3: Repair Synthesizer          │
+├──────────┼──────────────────────────────────────────────┤
+│  STEP 3  │  Re-verify all 10 invariants                 │
+│          │  └─ Self-Reflection Loop if failed            │
+└──────────┴──────────────────────────────────────────────┘
+```
+
+---
+
+## Bug Types
+
+### Tier 1 — Known Bugs (Catalog Repair)
+
+**Physics Simulator:**
+
+| ID | Bug | Mutation | Visible Effect |
+|----|-----|----------|----------------|
+| B1 | Gravity Inversion | gravityY = -1 | Ball floats up |
+| B2 | Collision Disabled | collisionMask = 0 | Falls through floor |
+| B3 | Abnormal Restitution | restitution = 5.0 | Accelerating bounces |
+| B4 | Zero Friction | friction = 0 | Slides forever |
+| B5 | Bounds Disabled | boundsEnabled = false | Disappears off-screen |
+
+**STG Shooter:**
+
+| ID | Bug | Mutation | Visible Effect |
+|----|-----|----------|----------------|
+| S1 | Bullet Freeze | bulletSpeed = 0 | Bullets don't move |
+| S2 | Hitbox Gone | hitboxRadius = 0 | No collision detection |
+| S3 | Fire Disabled | fireRate = 999 | Can't shoot |
+| S4 | Player Freeze | playerSpeed = 0 | Can't move |
+| S5 | Enemy Freeze | enemySpeed = 0 | Enemies stop |
+
+### Tier 2 — Unknown Bugs (VLM Reasoning Repair)
+
+| ID | Bug | Mutation | Detection Method |
+|----|-----|----------|-----------------|
+| U1/X1 | Time/Spawn anomaly | timeScale=0.01 / spawnInterval=2 | Behavioral analysis |
+| U2/X2 | Lateral gravity/Slow bullets | gravityX=5 / bulletSpeed=0.3 | Telemetry drift |
+| U3/X3 | Heavy ball/Fast enemies | ballMass=10000 / enemySpeed=15 | Physics anomaly |
+| U4/X4 | Locked inertia/Giant hitbox | ballInertia=99999999 / hitboxRadius=300 | VLM observation |
+| U5/X5 | Tiny ball/Bullet spam | ballRadius=3 / fireRate=1 | Multi-screenshot analysis |
+
+---
+
+## Project Structure
+
+```
+genieguard/
+├── web/                        # Web simulators
+│   ├── index.html              # Physics simulator (Matter.js)
+│   ├── stg.html                # STG shooter game
+│   ├── dashboard.html          # Demo dashboard (JP/EN)
+│   ├── sim.js                  # Physics engine
+│   ├── config.js               # Physics parameters (repair target)
+│   ├── telemetry.js            # Telemetry system
+│   └── hud.js                  # HUD overlay
 │
-├── genieguard/             # Pythonモジュール
-│   ├── random_breaker.py   # ランダム破壊
-│   ├── telemetry_collector.py  # テレメトリ収集
-│   ├── invariant_checker.py    # 数値判定（VLM非依存）
-│   ├── patch_selector.py   # LLMパッチ選択
-│   ├── patch_applier.py    # パッチ適用
-│   └── evidence_exporter.py    # 証跡出力
+├── genieguard/                 # Python modules
+│   ├── random_breaker.py       # Random bug injection
+│   ├── telemetry_collector.py  # Telemetry collection
+│   ├── invariant_checker.py    # Numeric invariant checks
+│   ├── patch_selector.py       # LLM patch selection
+│   ├── patch_applier.py        # Patch application
+│   └── evidence_exporter.py    # Evidence export
 │
 ├── data/
-│   └── patch_catalog.json  # パッチカタログ
+│   └── patch_catalog.json      # Patch catalog
 │
-├── output/                 # 出力ディレクトリ
-│   ├── audit_report.json   # 監査レポート
-│   ├── patch.diff          # 修正差分
-│   ├── before.png          # 修正前スクショ
-│   ├── after.png           # 修正後スクショ
-│   ├── ci_result.txt       # CI結果
-│   └── run_log.txt         # 実行ログ
-│
-├── genieguard.py           # メインCLI
-├── break.py                # 破壊スクリプト
-├── server.py               # 開発サーバー
-└── requirements.txt        # 依存関係
+├── genieguard.py               # Main CLI
+├── break.py                    # Break script
+├── server.py                   # Dev server
+└── requirements.txt            # Dependencies
 ```
 
-## バグ種類（5種類）
+## Design Principles
 
-| ID | バグ名 | 破壊内容 | 可視化される破綻 |
-|----|--------|----------|------------------|
-| B1 | 重力反転 | gravityY = -1 | ボールが上に飛ぶ |
-| B2 | 衝突無効化 | collisionMask = 0 | 床をすり抜ける |
-| B3 | 反発係数異常 | restitution = 5.0 | バウンスで加速 |
-| B4 | 摩擦消失 | friction = 0 | 永遠に滑り続ける |
-| B5 | 境界無効 | boundsEnabled = false | 画面外に消える |
+1. **Telemetry-driven detection** — PASS/FAIL is determined by numeric invariants, not VLM
+2. **Patch catalog (Tier 1)** — LLM selects a patch_id only; no code generation
+3. **Sandbox validation (Tier 2)** — AI-generated patches are gated by whitelist + range checks
+4. **Self-Reflection** — Failed repairs trigger re-diagnosis with failure context
+5. **Multi-game support** — Same pipeline works for physics sims and STG shooters
 
-## 設計原則
-
-1. **テレメトリ主導判定** - PASS/FAILは数値条件で判定。VLMに依存しない
-2. **パッチカタログ方式** - LLMはpatch_idを選択するのみ。コード生成させない
-3. **スクショは証跡のみ** - 画像は保存用。判定には使わない
-4. **ランダム破壊** - 5種類バグから1〜3個をランダム選択
-
-## CLIオプション
+## CLI Options
 
 ```bash
-# フルパイプライン（破壊→検知→修復→検証）
+# Full pipeline (break → detect → repair → verify)
 python genieguard.py
 
-# 破壊スキップ（現状をテスト）
+# Skip break (test current state)
 python genieguard.py --no-break
 
-# 特定バグを注入
+# Inject specific bugs
 python genieguard.py --specific B1 B3
 
-# バグ数を指定
+# Set bug count
 python genieguard.py --bugs 2
 
-# ヘッドレスモード
+# Headless mode
 python genieguard.py --headless
 ```
 
-## 環境変数
+## Environment Variables
 
 ```bash
-# Gemini APIキー（オプション - なくてもフォールバックで動作）
+# Gemini API key (optional — falls back without it)
 export GEMINI_API_KEY=your_api_key
-# または
-export GOOGLE_API_KEY=your_api_key
 ```
 
-## 出力成果物
-
-| ファイル | 内容 | 用途 |
-|----------|------|------|
-| audit_report.json | 検知バグ一覧、テレメトリ要約、適用パッチ | 監査証跡 |
-| patch.diff | config.jsの差分 | 修正証拠 |
-| before.png | 修正前スクリーンショット | ビジュアル比較 |
-| after.png | 修正後スクリーンショット | ビジュアル比較 |
-| ci_result.txt | PASS/FAIL + 各条件の判定結果 | CIゲート |
-| run_log.txt | 全実行ログ | デバッグ+再現 |
-
-## ライセンス
+## License
 
 MIT License
