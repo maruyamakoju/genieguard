@@ -612,6 +612,68 @@ function setLang(lang){
   }
 }
 
+// ── Log Translation Helper ────────────────────────────────────
+// Instead of adding 100+ keys to LANG, we use a simple map for log/UI messages
+const LOG_EN={
+  // STEP headers
+  '━━ STEP 1: Tier1 既知バグ注入 ━━':'━━ STEP 1: Inject Tier1 Known Bug ━━',
+  '━━ STEP 1: Tier2 未知バグ注入 ━━':'━━ STEP 1: Inject Tier2 Unknown Bug ━━',
+  '━━ STEP 2: GenieGuard パイプライン起動 ━━':'━━ STEP 2: GenieGuard Pipeline Start ━━',
+  '━━ STEP 3: 修復後検証（全10項目） ━━':'━━ STEP 3: Post-Repair Verification (All 10 Items) ━━',
+  '━━ パイプライン完了 ━━':'━━ Pipeline Complete ━━',
+  '━━ 再検証（Self-Reflection後） ━━':'━━ Re-verification (After Self-Reflection) ━━',
+  '━━ フリーモード: カスタムバグ注入 ━━':'━━ Free Mode: Custom Bug Injection ━━',
+  // Pipeline log messages
+  '🔍 テレメトリ収集中...':'🔍 Collecting telemetry...',
+  '🔬 Tier1 不変量チェック実行中...':'🔬 Running Tier1 invariant check...',
+  '🔬 Tier2 行動異常検知中...':'🔬 Running Tier2 behavioral anomaly detection...',
+  '🧠 Tier1: Gemini AI に診断リクエスト送信...':'🧠 Tier1: Sending diagnosis request to Gemini AI...',
+  '🩹 Tier1 カタログパッチ適用中...':'🩹 Applying Tier1 catalog patches...',
+  '🧠 Tier2: VLM深層分析開始（3枚スクリーンショット）...':'🧠 Tier2: Starting VLM deep analysis (3 screenshots)...',
+  '🩹 Tier2 サンドボックスパッチ適用中...':'🩹 Applying Tier2 sandbox patches...',
+  'パッチ適用完了。シミュレータ再読込中...':'Patch applied. Reloading simulator...',
+  '全10項目合格！修復不要です。':'All 10 items passed! No repair needed.',
+  '🎉 全不変量チェック合格！シミュレータは安全にデプロイ可能です。':'🎉 All invariant checks passed! Simulator is safe to deploy.',
+  'シミュレータにバグが注入されました。':'Bug has been injected into the simulator.',
+  'リセット完了':'Reset complete',
+  'スクリーンショット取得失敗':'Screenshot capture failed',
+  'シミュレータ準備タイムアウト':'Simulator ready timeout',
+  '🔄 Self-Reflection Loop: 修復に失敗 → 再推論開始':'🔄 Self-Reflection Loop: Repair failed → Starting re-reasoning',
+  '🩹 修正パッチ適用中...':'🩹 Applying correction patch...',
+  '🔍 Agent 1: Vision Analyst + Agent 2: Physics Analyst 並列起動...':'🔍 Agent 1: Vision Analyst + Agent 2: Physics Analyst running in parallel...',
+  '🧬 Agent 3: Repair Synthesizer — クロスバリデーション + パッチ生成...':'🧬 Agent 3: Repair Synthesizer — Cross-validation + patch generation...',
+  'Tier2 VLM分析完了':'Tier2 VLM analysis complete',
+  // Auto demo
+  '║  ACT 1: Tier1 既知バグ → カタログ修復  ║':'║  ACT 1: Tier1 Known Bug → Catalog Repair  ║',
+  '║  ACT 2: Tier2 未知バグ → VLM推論修復    ║':'║  ACT 2: Tier2 Unknown Bug → VLM Reasoning Repair ║',
+  '═══ 全幕終了 ═══':'═══ All Acts Complete ═══',
+  // Init messages
+  'GenieGuard v3.0 (2-Tier Architecture) 起動':'GenieGuard v3.0 (2-Tier Architecture) started',
+  'Tier1: 既知バグ5種 → カタログ修復':'Tier1: 5 known bugs → Catalog repair',
+  'Tier2: 未知バグ → 3-Agent VLM推論 + Self-Reflection修復':'Tier2: Unknown bugs → 3-Agent VLM reasoning + Self-Reflection repair',
+  '対応ゲーム: 2D物理 / STG シューティング':'Supported games: 2D Physics / STG Shooter',
+  '「▶ 自動デモ開始」で全工程を自動実行できます。':'Press "▶ Start Auto Demo" to run the full process automatically.',
+  // Free mode
+  '全パラメータが正常値です。スライダーを変更してから実行してください。':'All parameters are at normal values. Change sliders before running.',
+  // Sandbox
+  'ホワイトリスト外':' not in whitelist',
+};
+function L(s){return currentLang==='en'&&LOG_EN[s]?LOG_EN[s]:s;}
+
+// ── English Bug Names ─────────────────────────────────────────
+const BN_T1_EN={B1:'Gravity Inversion',B2:'Collision Disabled',B3:'Abnormal Bounce',B4:'Zero Friction',B5:'Out of Bounds'};
+const BN_T2_EN={U1:'Time Freeze',U2:'Lateral Gravity',U3:'Super Mass',U4:'Locked Inertia',U5:'Tiny Ball'};
+const STG_BN_EN={S1:'Bullet Freeze',S2:'Hitbox Gone',S3:'Fire Disabled',S4:'Player Freeze',S5:'Enemy Freeze',X1:'Enemy Swarm',X2:'Slow Bullets',X3:'Hyper-Fast Enemy',X4:'Giant Hitbox',X5:'Bullet Spam'};
+function getBN(id){
+  if(currentLang==='en'){
+    return BN_T1_EN[id]||BN_T2_EN[id]||STG_BN_EN[id]||id;
+  }
+  return BN[id]||id;
+}
+
+// ── Check Reason Translation Helper ──────────────────────────
+function R(ja,en){return currentLang==='en'?en:ja;}
+
 // ── Timing Constants ──────────────────────────────────────────
 const TIMING = {
   SIM_READY_TIMEOUT:  5000,   // ms — max wait for iframe sim ready
@@ -661,18 +723,18 @@ const STG_PATCH_WHITELIST={bulletSpeed:{min:0,max:20},fireRate:{min:1,max:120},s
 Object.assign(BN,STG_BN);Object.assign(FIX_T1,STG_FIX_T1);
 
 function checkSTGTier1(frames,config,isVerify=false){return{
-  S1:{pass:config.bulletSpeed>0,reason:config.bulletSpeed>0?'正常':`弾速ゼロ (${config.bulletSpeed})`},
-  S2:{pass:config.hitboxRadius>0,reason:config.hitboxRadius>0?'正常':`判定ゼロ (${config.hitboxRadius})`},
-  S3:{pass:config.fireRate<100,reason:config.fireRate<100?'正常':`発射不能 (fireRate=${config.fireRate})`},
-  S4:{pass:config.playerSpeed>0,reason:config.playerSpeed>0?'正常':`移動不能 (${config.playerSpeed})`},
-  S5:{pass:config.enemySpeed>0,reason:config.enemySpeed>0?'正常':`敵停止 (${config.enemySpeed})`},
+  S1:{pass:config.bulletSpeed>0,reason:config.bulletSpeed>0?R('正常','Normal'):R(`弾速ゼロ (${config.bulletSpeed})`,`Bullet speed zero (${config.bulletSpeed})`)},
+  S2:{pass:config.hitboxRadius>0,reason:config.hitboxRadius>0?R('正常','Normal'):R(`判定ゼロ (${config.hitboxRadius})`,`Hitbox zero (${config.hitboxRadius})`)},
+  S3:{pass:config.fireRate<100,reason:config.fireRate<100?R('正常','Normal'):R(`発射不能 (fireRate=${config.fireRate})`,`Fire disabled (fireRate=${config.fireRate})`)},
+  S4:{pass:config.playerSpeed>0,reason:config.playerSpeed>0?R('正常','Normal'):R(`移動不能 (${config.playerSpeed})`,`Movement disabled (${config.playerSpeed})`)},
+  S5:{pass:config.enemySpeed>0,reason:config.enemySpeed>0?R('正常','Normal'):R(`敵停止 (${config.enemySpeed})`,`Enemy stopped (${config.enemySpeed})`)},
 };}
 function checkSTGTier2(frames,config,isVerify=false){return{
-  X1:{pass:config.spawnInterval>=10,reason:config.spawnInterval>=10?'正常':`敵大量発生 (interval=${config.spawnInterval})`},
-  X2:{pass:!(config.bulletSpeed>0&&config.bulletSpeed<2),reason:!(config.bulletSpeed>0&&config.bulletSpeed<2)?'正常':`弾速低下 (${config.bulletSpeed})`},
-  X3:{pass:config.enemySpeed<=10,reason:config.enemySpeed<=10?'正常':`敵超高速 (${config.enemySpeed})`},
-  X4:{pass:config.hitboxRadius<=50,reason:config.hitboxRadius<=50?'正常':`判定巨大化 (hitbox=${config.hitboxRadius})`},
-  X5:{pass:!(config.fireRate>0&&config.fireRate<3),reason:!(config.fireRate>0&&config.fireRate<3)?'正常':`弾幕過多 (fireRate=${config.fireRate})`},
+  X1:{pass:config.spawnInterval>=10,reason:config.spawnInterval>=10?R('正常','Normal'):R(`敵大量発生 (interval=${config.spawnInterval})`,`Enemy swarm (interval=${config.spawnInterval})`)},
+  X2:{pass:!(config.bulletSpeed>0&&config.bulletSpeed<2),reason:!(config.bulletSpeed>0&&config.bulletSpeed<2)?R('正常','Normal'):R(`弾速低下 (${config.bulletSpeed})`,`Slow bullets (${config.bulletSpeed})`)},
+  X3:{pass:config.enemySpeed<=10,reason:config.enemySpeed<=10?R('正常','Normal'):R(`敵超高速 (${config.enemySpeed})`,`Hyper-fast enemy (${config.enemySpeed})`)},
+  X4:{pass:config.hitboxRadius<=50,reason:config.hitboxRadius<=50?R('正常','Normal'):R(`判定巨大化 (hitbox=${config.hitboxRadius})`,`Giant hitbox (hitbox=${config.hitboxRadius})`)},
+  X5:{pass:!(config.fireRate>0&&config.fireRate<3),reason:!(config.fireRate>0&&config.fireRate<3)?R('正常','Normal'):R(`弾幕過多 (fireRate=${config.fireRate})`,`Bullet spam (fireRate=${config.fireRate})`)},
 };}
 
 // ── Game Accessor ────────────────────────────────────────────
@@ -714,15 +776,15 @@ function sandboxValidate(patch){
   const safe={},rejected=[];
   for(const [key,value] of Object.entries(patch)){
     const rule=GAME.whitelist[key];
-    if(!rule){rejected.push(`${key}: ホワイトリスト外`);continue;}
+    if(!rule){rejected.push(`${key}: ${R('ホワイトリスト外','not in whitelist')}`);continue;}
     if(rule.type==='boolean'){safe[key]=!!value;}
     else if(rule.type==='nullable'){
       if(value===null||value===undefined){safe[key]=null;}
       else if(typeof value==='number'&&value>=rule.min&&value<=rule.max){safe[key]=value;}
-      else{rejected.push(`${key}: 範囲外 (${value})`);}
+      else{rejected.push(`${key}: ${R('範囲外','out of range')} (${value})`);}
     }else{
       if(typeof value==='number'&&value>=rule.min&&value<=rule.max){safe[key]=value;}
-      else{rejected.push(`${key}: 範囲外 (${value})`);}
+      else{rejected.push(`${key}: ${R('範囲外','out of range')} (${value})`);}
     }
   }
   return{safe,rejected};
@@ -852,16 +914,16 @@ function checkTier1(frames,config,isVerify=false){
   const s=summarize(frames),r={};
   // Skip behavioral checks when Tier2 bugs make ball unreachable (slow sim or tiny ball)
   const skipBehavior=(config.timeScale??1)<0.5||(config.ballRadius??20)<8;
-  r.B1={pass:config.gravityY>0&&(skipBehavior||s.y_delta_mean>-5),reason:config.gravityY>0?'正常':'重力が反転 (Y='+config.gravityY+')'};
+  r.B1={pass:config.gravityY>0&&(skipBehavior||s.y_delta_mean>-5),reason:config.gravityY>0?R('正常','Normal'):R('重力が反転 (Y='+config.gravityY+')','Gravity inverted (Y='+config.gravityY+')')};
   // B2: Config-only check — behavioral collision count is unreliable (affected by B1/B3/B5)
   const b2cOk=config.collisionMask!==0&&config.collisionMask!==undefined;
-  r.B2={pass:b2cOk,reason:b2cOk?'正常':'衝突無効 (mask='+config.collisionMask+')'};
-  r.B3={pass:config.restitution<=1&&(skipBehavior||s.max_vy<80),reason:config.restitution<=1?'正常':'異常反発 ('+config.restitution+')'};
-  r.B4={pass:config.friction>0||config.frictionAir>0,reason:config.friction>0?'正常':'摩擦ゼロ'};
+  r.B2={pass:b2cOk,reason:b2cOk?R('正常','Normal'):R('衝突無効 (mask='+config.collisionMask+')','Collision disabled (mask='+config.collisionMask+')')};
+  r.B3={pass:config.restitution<=1&&(skipBehavior||s.max_vy<80),reason:config.restitution<=1?R('正常','Normal'):R('異常反発 ('+config.restitution+')','Abnormal restitution ('+config.restitution+')')};
+  r.B4={pass:config.friction>0||config.frictionAir>0,reason:config.friction>0?R('正常','Normal'):R('摩擦ゼロ','Zero friction')};
   const yMax=Math.max(...s.y_values),yMin=Math.min(...s.y_values);
   const b5cOk=config.boundsEnabled===true;
   const b5rOk=yMax<800&&yMin>-200;
-  r.B5={pass:isVerify||skipBehavior?b5cOk:(b5cOk&&b5rOk),reason:!b5cOk?'範囲チェック無効':(!b5rOk&&!isVerify&&!skipBehavior?`ボール範囲外 (Y: ${yMin.toFixed(0)}〜${yMax.toFixed(0)})`:'正常')};
+  r.B5={pass:isVerify||skipBehavior?b5cOk:(b5cOk&&b5rOk),reason:!b5cOk?R('範囲チェック無効','Bounds check disabled'):(!b5rOk&&!isVerify&&!skipBehavior?R(`ボール範囲外 (Y: ${yMin.toFixed(0)}〜${yMax.toFixed(0)})`,`Ball out of bounds (Y: ${yMin.toFixed(0)}~${yMax.toFixed(0)})`):R('正常','Normal'))};
   return r;
 }
 
@@ -874,27 +936,27 @@ function checkTier2(frames,config,isVerify=false){
   // U1: timeScale anomaly — ball barely moves or too fast
   const ts=config.timeScale??1;
   const tsBad=ts<0.5||ts>2;
-  r.U1={pass:isVerify?!tsBad:!tsBad,reason:tsBad?`時間スケール異常 (${ts})`:'正常'};
+  r.U1={pass:isVerify?!tsBad:!tsBad,reason:tsBad?R(`時間スケール異常 (${ts})`,`Time scale anomaly (${ts})`):R('正常','Normal')};
 
   // U2: gravityX anomaly — lateral acceleration
   const gx=config.gravityX??0;
   const gxBad=Math.abs(gx)>0.5;
-  r.U2={pass:!gxBad,reason:gxBad?`X軸重力異常 (${gx})`:'正常'};
+  r.U2={pass:!gxBad,reason:gxBad?R(`X軸重力異常 (${gx})`,`X-axis gravity anomaly (${gx})`):R('正常','Normal')};
 
   // U3: ballMass anomaly — abnormal mass
   const mass=config.ballMass??1;
   const massBad=mass>50||mass<0.01;
-  r.U3={pass:!massBad,reason:massBad?`質量異常 (${mass})`:'正常'};
+  r.U3={pass:!massBad,reason:massBad?R(`質量異常 (${mass})`,`Mass anomaly (${mass})`):R('正常','Normal')};
 
   // U4: ballInertia anomaly — locked rotation
   const inertia=config.ballInertia;
   const iBad=inertia!=null&&inertia>10000;
-  r.U4={pass:!iBad,reason:iBad?`慣性モーメント異常 (${inertia})`:'正常'};
+  r.U4={pass:!iBad,reason:iBad?R(`慣性モーメント異常 (${inertia})`,`Inertia anomaly (${inertia})`):R('正常','Normal')};
 
   // U5: ballRadius anomaly — tiny or huge
   const radius=config.ballRadius??20;
   const rBad=radius<8||radius>60;
-  r.U5={pass:!rBad,reason:rBad?`ボール半径異常 (${radius})`:'正常'};
+  r.U5={pass:!rBad,reason:rBad?R(`ボール半径異常 (${radius})`,`Ball radius anomaly (${radius})`):R('正常','Normal')};
 
   return r;
 }
@@ -907,21 +969,21 @@ function detectAnomalies(frames,config){
   // Time progression
   // Time progression — only flag if timeScale config is actually abnormal (avoid iframe reload timing noise)
   const tsVal=config.timeScale??1;
-  if(tsVal<0.5)anomalies.push({type:'time_frozen',desc:`シミュレーション速度が極端に低い (timeScale=${tsVal})`,severity:'high'});
+  if(tsVal<0.5)anomalies.push({type:'time_frozen',desc:R(`シミュレーション速度が極端に低い (timeScale=${tsVal})`,`Simulation speed extremely low (timeScale=${tsVal})`),severity:'high'});
 
   // X-axis drift
-  if(Math.abs(s.avg_vx)>3)anomalies.push({type:'x_drift',desc:`X軸方向の持続的加速 (平均VX=${s.avg_vx.toFixed(1)})`,severity:'high'});
+  if(Math.abs(s.avg_vx)>3)anomalies.push({type:'x_drift',desc:R(`X軸方向の持続的加速 (平均VX=${s.avg_vx.toFixed(1)})`,`Persistent X-axis acceleration (avgVX=${s.avg_vx.toFixed(1)})`),severity:'high'});
 
   // High momentum / mass
-  if(s.ball.mass>50)anomalies.push({type:'heavy_ball',desc:`異常に高い質量 (${s.ball.mass})`,severity:'high'});
+  if(s.ball.mass>50)anomalies.push({type:'heavy_ball',desc:R(`異常に高い質量 (${s.ball.mass})`,`Abnormally high mass (${s.ball.mass})`),severity:'high'});
 
   // No rotation despite collisions
   if(s.collisions>0&&s.ball.angularVelocity!=null&&Math.abs(s.ball.angularVelocity)<0.001)
-    anomalies.push({type:'no_rotation',desc:'衝突後もボールが全く回転しない',severity:'medium'});
+    anomalies.push({type:'no_rotation',desc:R('衝突後もボールが全く回転しない','Ball does not rotate at all after collisions'),severity:'medium'});
 
   // Ball size (skip if radius=0 — telemetry not yet initialized)
-  if(s.ball.radius>0&&s.ball.radius<10)anomalies.push({type:'tiny_ball',desc:`ボールが異常に小さい (r=${s.ball.radius})`,severity:'high'});
-  if(s.ball.radius>50)anomalies.push({type:'huge_ball',desc:`ボールが異常に大きい (r=${s.ball.radius})`,severity:'high'});
+  if(s.ball.radius>0&&s.ball.radius<10)anomalies.push({type:'tiny_ball',desc:R(`ボールが異常に小さい (r=${s.ball.radius})`,`Ball is abnormally small (r=${s.ball.radius})`),severity:'high'});
+  if(s.ball.radius>50)anomalies.push({type:'huge_ball',desc:R(`ボールが異常に大きい (r=${s.ball.radius})`,`Ball is abnormally large (r=${s.ball.radius})`),severity:'high'});
 
   return anomalies;
 }
@@ -941,14 +1003,14 @@ function captureSimScreenshot(){
     const ctx=out.getContext('2d');
     canvases.forEach(c=>{try{ctx.drawImage(c,0,0);}catch(e){}});
     return out.toDataURL('image/jpeg',0.8).split(',')[1];
-  }catch(e){log('スクリーンショット取得失敗','w');return null;}
+  }catch(e){log(L('スクリーンショット取得失敗'),'w');return null;}
 }
 
 /* ═══════════════════════════════════
    GEMINI API — Tier 1 (Text + Vision)
    ═══════════════════════════════════ */
 async function callGeminiTier1(results,summary){
-  const failed=Object.entries(results).filter(([,v])=>!v.pass).map(([k,v])=>`${k}(${BN[k]}): ${v.reason}`);
+  const failed=Object.entries(results).filter(([,v])=>!v.pass).map(([k,v])=>`${k}(${getBN(k)}): ${v.reason}`);
   const screenshot=captureSimScreenshot();
   showVLMScreenshots(screenshot?[screenshot]:[]);
 
@@ -976,7 +1038,7 @@ gravityY=${summary.config?.gravityY}, restitution=${summary.config?.restitution}
 
 function fallbackT1(r){
   const f=Object.entries(r).filter(([,v])=>!v.pass).map(([k])=>k);
-  return{visual_analysis:'N/A',diagnosis:`${f.length}件の既知バグを検出: ${f.map(b=>BN[b]).join('、')}。カタログから修復パッチを自動選択。`,patches:f.map(b=>'FIX_'+b)};
+  return{visual_analysis:'N/A',diagnosis:`${f.length}件の既知バグを検出: ${f.map(b=>getBN(b)).join('、')}。カタログから修復パッチを自動選択。`,patches:f.map(b=>'FIX_'+b)};
 }
 
 /* ═══════════════════════════════════
@@ -1019,7 +1081,7 @@ async function callGeminiTier2(anomalies,frames,config,screenshots){
 **JSON形式のみ**:
 {"analysis":"テレメトリから判断される物理的異常","suspected_params":[{"param":"パラメータ名","current":"現在値","expected":"正常値","reason":"判断根拠"}]}`;
 
-  log('🔍 Agent 1: Vision Analyst + Agent 2: Physics Analyst 並列起動...','o');
+  log(L('🔍 Agent 1: Vision Analyst + Agent 2: Physics Analyst 並列起動...'),'o');
 
   const vParts=[{text:visionPrompt}];
   for(const ss of screenshots){if(ss)vParts.push({inline_data:{mime_type:'image/jpeg',data:ss}});}
@@ -1029,15 +1091,15 @@ async function callGeminiTier2(anomalies,frames,config,screenshots){
   try{
     [vRes,pRes]=await Promise.all([callGeminiAPI(vParts),callGeminiAPI(pParts)]);
   }catch(e){
-    log(`並列分析エラー — フォールバック実行: ${e.message}`,'w');
+    log(`${R('並列分析エラー — フォールバック実行','Parallel analysis error — Executing fallback')}: ${e.message}`,'w');
     return fallbackT2(anomalies,config);
   }
 
-  log(`  ✓ Vision Agent: ${(vRes.visual_anomalies||[]).length}件の視覚異常`,'o');
-  log(`  ✓ Physics Agent: ${(pRes.suspected_params||[]).length}件のパラメータ異常`,'o');
+  log(`  ✓ Vision Agent: ${(vRes.visual_anomalies||[]).length}${R('件の視覚異常',' visual anomalies')}`,'o');
+  log(`  ✓ Physics Agent: ${(pRes.suspected_params||[]).length}${R('件のパラメータ異常',' parameter anomalies')}`,'o');
 
   // ── Agent 3: Repair Synthesizer (Cross-Validation) ──
-  log('🧬 Agent 3: Repair Synthesizer — クロスバリデーション + パッチ生成...','o');
+  log(L('🧬 Agent 3: Repair Synthesizer — クロスバリデーション + パッチ生成...'),'o');
 
   const synthPrompt=`あなたはGenieGuard **Repair Synthesizer Agent** です。
 2つの専門エージェントの分析を統合し、修復パッチを生成してください。
@@ -1156,21 +1218,21 @@ async function doBreak(tier='t1'){
 
   if(tier==='t1'){
     activeTier='t1';
-    log('━━ STEP 1: Tier1 既知バグ注入 ━━','w');
+    log(L('━━ STEP 1: Tier1 既知バグ注入 ━━'),'w');
     const ids=Object.keys(GAME.bugsT1),n=Math.floor(Math.random()*2)+1;
     activeBugs=ids.sort(()=>Math.random()-.5).slice(0,n);
     activeBugs.forEach(b=>Object.assign(broken,GAME.bugsT1[b]));
-    const names=activeBugs.map(b=>`${b}（${BN[b]}）`).join('、');
-    log(`💥 Tier1注入: ${names}`,'e');
+    const names=activeBugs.map(b=>`${b}（${getBN(b)}）`).join(currentLang==='en'?', ':'、');
+    log(`💥 ${R('Tier1注入','Tier1 inject')}: ${names}`,'e');
     activeBugs.forEach(b=>setGauge(b,'fail'));
   }else{
     activeTier='t2';
-    log('━━ STEP 1: Tier2 未知バグ注入 ━━','o');
+    log(L('━━ STEP 1: Tier2 未知バグ注入 ━━'),'o');
     const ids=Object.keys(GAME.bugsT2),n=Math.floor(Math.random()*2)+1;
     activeBugs=ids.sort(()=>Math.random()-.5).slice(0,n);
     activeBugs.forEach(b=>Object.assign(broken,GAME.bugsT2[b]));
-    const names=activeBugs.map(b=>`${b}（${BN[b]}）`).join('、');
-    log(`💥 Tier2注入: ${names}`,'o');
+    const names=activeBugs.map(b=>`${b}（${getBN(b)}）`).join(currentLang==='en'?', ':'、');
+    log(`💥 ${R('Tier2注入','Tier2 inject')}: ${names}`,'o');
     activeBugs.forEach(b=>setGauge(b,'anomaly'));
   }
 
@@ -1178,7 +1240,7 @@ async function doBreak(tier='t1'){
   applyConfig(broken);
   simTag('tag-err','err');
   setFlow('fs-break','broken');
-  log('シミュレータにバグが注入されました。','w');
+  log(L('シミュレータにバグが注入されました。'),'w');
 
   setTimeout(()=>{try{document.getElementById('sim-frame').contentWindow.spawnBall();}catch(e){}},TIMING.BREAK_SPAWN_DELAY);
 }
@@ -1188,20 +1250,20 @@ async function doRun(){
   const aiOut=document.getElementById('ai-output');
   hideBanner();
   try{ await _doRunPipeline(aiOut); }
-  catch(e){ log(`パイプラインエラー: ${e.message}`,'e'); }
+  catch(e){ log(`${R('パイプラインエラー','Pipeline error')}: ${e.message}`,'e'); }
   finally{ running=false;disBtn(false); }
 }
 async function _doRunPipeline(aiOut){
 
   setFlow('fs-guard','active');setArrow('fa-1',true);
   glowPanel('sim-panel','cyan');glowPanel('ai-panel','cyan');
-  log('━━ STEP 2: GenieGuard パイプライン起動 ━━','i');
+  log(L('━━ STEP 2: GenieGuard パイプライン起動 ━━'),'i');
 
   // ── Phase A: Collect telemetry ──
   scanline(true);
-  log('🔍 テレメトリ収集中...','i');
+  log(L('🔍 テレメトリ収集中...'),'i');
   aiTag('tag-scanning','active');
-  aiOut.innerHTML='<span style="color:var(--cyan)">🔍 シミュレータからテレメトリデータを収集しています...</span>';
+  aiOut.innerHTML=`<span style="color:var(--cyan)">🔍 ${R('シミュレータからテレメトリデータを収集しています...','Collecting telemetry data from simulator...')}</span>`;
   try{document.getElementById('sim-frame').contentWindow.spawnBall();}catch(e){}
   await waitForBallData(TIMING.BALL_DATA_COLLECT);
   await sleep(400);
@@ -1209,27 +1271,27 @@ async function _doRunPipeline(aiOut){
   const frames=await collect(TIMING.COLLECT_FRAMES,TIMING.COLLECT_INTERVAL);
   const summary=summarize(frames);
   graphData=summary.y_values||[];drawGraph();
-  log(`${frames.length} フレーム取得完了`,'i');
+  log(`${frames.length} ${R('フレーム取得完了','frames collected')}`,'i');
   scanline(false);
 
   const config=summary.config||cfg;
 
   // ── Phase B: Tier 1 Invariant Check ──
-  log('🔬 Tier1 不変量チェック実行中...','i');
+  log(L('🔬 Tier1 不変量チェック実行中...'),'i');
   GAME.t1ids.forEach(b=>setGauge(b,'checking'));
   await sleep(400);
 
   const t1Results=GAME.checkT1(frames,config);
   for(const [b,res] of Object.entries(t1Results)){
     setGauge(b,res.pass?'pass':'fail');
-    log(`  ${b}（${BN[b]}）: ${res.pass?'✓ 合格':'✗ 不合格'} — ${res.reason}`,res.pass?'i':'e');
+    log(`  ${b}（${getBN(b)}）: ${res.pass?R('✓ 合格','✓ Pass'):R('✗ 不合格','✗ Fail')} — ${res.reason}`,res.pass?'i':'e');
     await sleep(120);
   }
 
   const t1Failed=Object.entries(t1Results).filter(([,v])=>!v.pass).map(([k])=>k);
 
   // ── Phase C: Tier 2 Behavioral Anomaly Detection ──
-  log('🔬 Tier2 行動異常検知中...','o');
+  log(L('🔬 Tier2 行動異常検知中...'),'o');
   GAME.t2ids.forEach(b=>setGauge(b,'checking'));
   await sleep(400);
 
@@ -1238,12 +1300,12 @@ async function _doRunPipeline(aiOut){
   for(const [b,res] of Object.entries(t2Results)){
     setGauge(b,res.pass?'pass':'anomaly');
     if(!res.pass)setGauge(b,'fail');
-    log(`  ${b}（${BN[b]}）: ${res.pass?'✓ 正常':'⚠ 異常'} — ${res.reason}`,res.pass?'i':'o');
+    log(`  ${b}（${getBN(b)}）: ${res.pass?R('✓ 正常','✓ Normal'):R('⚠ 異常','⚠ Anomaly')} — ${res.reason}`,res.pass?'i':'o');
     await sleep(120);
   }
 
   if(anomalies.length>0){
-    log(`🔎 行動異常 ${anomalies.length}件検出:`,'o');
+    log(`🔎 ${R('行動異常','Behavioral anomalies')} ${anomalies.length}${R('件検出',' detected')}:`,'o');
     anomalies.forEach(a=>log(`  ⚠ ${a.desc}`,'o'));
   }
 
@@ -1264,17 +1326,17 @@ async function _doRunPipeline(aiOut){
   }
 
   if(!allFailed.length && configDrift.length===0){
-    log('全10項目合格！修復不要です。','i');
+    log(L('全10項目合格！修復不要です。'),'i');
     setFlow('fs-guard','done');setFlow('fs-verify','done');setArrow('fa-2',true);
     glowPanel('sim-panel','green');glowPanel('ai-panel','green');
-    showBanner('pass','✅ 全10項目 合格 — シミュレータは正常です');
-    aiOut.textContent='全チェック合格。異常は検出されませんでした。';
+    showBanner('pass',R('✅ 全10項目 合格 — シミュレータは正常です','✅ All 10 Items Passed — Simulator is healthy'));
+    aiOut.textContent=R('全チェック合格。異常は検出されませんでした。','All checks passed. No anomalies detected.');
     return;
   }
 
   // If checks passed but config drift detected (Free Mode), force Tier 2 VLM
   if(!allFailed.length && configDrift.length>0){
-    log(`⚡ チェック閾値内だがパラメータ偏差 ${configDrift.length}件検出 → VLM強制解析`,'o');
+    log(`⚡ ${R('チェック閾値内だがパラメータ偏差','Within check thresholds but parameter drift')} ${configDrift.length}${R('件検出 → VLM強制解析',' detected → Forcing VLM analysis')}`,'o');
     configDrift.forEach(d=>log(`  🔸 ${d.key}: healthy=${d.healthy} → current=${d.current}`,'o'));
     // Synthesize a virtual Tier 2 failure so repair phase triggers VLM
     allFailed.push('FREE_DRIFT');
@@ -1286,29 +1348,29 @@ async function _doRunPipeline(aiOut){
 
   // ── Tier 1 Repair (Catalog) ──
   if(t1Failed.length>0){
-    log('🧠 Tier1: Gemini AI に診断リクエスト送信...','a');
+    log(L('🧠 Tier1: Gemini AI に診断リクエスト送信...'),'a');
     aiTag('tag-t1-analysis','active');
-    aiOut.innerHTML='<span style="color:var(--cyan)">🧠 Gemini 3.1 Pro — Tier1 カタログ診断中...</span>';
+    aiOut.innerHTML=`<span style="color:var(--cyan)">🧠 Gemini 3.1 Pro — ${R('Tier1 カタログ診断中...','Tier1 Catalog Diagnosis...')}</span>`;
     await sleep(300);
 
     const t1Diag=await callGeminiTier1(t1Results,summary);
     // Ensure all failed bugs have patches (Gemini sometimes misses)
     const needed=t1Failed.map(b=>'FIX_'+b);
     needed.forEach(p=>{if(!t1Diag.patches.includes(p))t1Diag.patches.push(p);});
-    log(`Tier1 AI診断完了: ${t1Diag.patches.join(', ')}`,'a');
+    log(`${R('Tier1 AI診断完了','Tier1 AI diagnosis complete')}: ${t1Diag.patches.join(', ')}`,'a');
 
-    const vPart=t1Diag.visual_analysis&&t1Diag.visual_analysis!=='N/A'?`\n── 👁️ 視覚分析 ──\n${t1Diag.visual_analysis}\n`:'';
-    const t1Text=`══ Tier 1 診断結果（カタログ修復） ══${vPart}
-── 📊 データ分析 ──
+    const vPart=t1Diag.visual_analysis&&t1Diag.visual_analysis!=='N/A'?`\n── 👁️ ${R('視覚分析','Visual Analysis')} ──\n${t1Diag.visual_analysis}\n`:'';
+    const t1Text=`══ Tier 1 ${R('診断結果（カタログ修復）','Diagnosis (Catalog Repair)')} ══${vPart}
+── 📊 ${R('データ分析','Data Analysis')} ──
 ${t1Diag.diagnosis}
 
-── 💊 カタログパッチ ──
-${t1Diag.patches.map(p=>'  ✦ '+p+' ('+BN[p.replace('FIX_','')]+')').join('\n')}`;
+── 💊 ${R('カタログパッチ','Catalog Patches')} ──
+${t1Diag.patches.map(p=>'  ✦ '+p+' ('+getBN(p.replace('FIX_',''))+')').join('\n')}`;
     await typewrite(aiOut,t1Text,6);
 
     // Apply Tier 1 patches
-    log('🩹 Tier1 カタログパッチ適用中...','i');
-    dH+='<span class="d-h">━━ Tier 1: カタログ修復 ━━</span>\n';
+    log(L('🩹 Tier1 カタログパッチ適用中...'),'i');
+    dH+=`<span class="d-h">${R('━━ Tier 1: カタログ修復 ━━','━━ Tier 1: Catalog Repair ━━')}</span>\n`;
     const pTag=document.getElementById('patch-tier-tag');pTag.textContent='Tier 1';pTag.className='tag tag-ok';pTag.style.display='';
     for(const p of t1Diag.patches){
       const bid=p.replace('FIX_',''),f=FIX_T1[bid];if(!f)continue;
@@ -1316,21 +1378,21 @@ ${t1Diag.patches.map(p=>'  ✦ '+p+' ('+BN[p.replace('FIX_','')]+')').join('\n')
       for(const [k,v] of Object.entries(f)){
         if(config[k]!==v){dH+=`<span class="d-del">- ${k}: ${config[k]}</span>\n<span class="d-add">+ ${k}: ${v}</span>\n`;fixed[k]=v;changed=true;}
       }
-      if(changed)log(`  ✦ ${p} 適用完了（${BN[bid]}修復）`,'i');
-      else log(`  ⏭ ${p} スキップ（値変更なし）`,'i');
+      if(changed)log(`  ✦ ${p} ${R('適用完了','applied')}（${getBN(bid)}${R('修復',' repair')}）`,'i');
+      else log(`  ⏭ ${p} ${R('スキップ（値変更なし）','skipped (no value change)')}`,'i');
     }
   }
 
   // ── Tier 2 Repair (VLM Reasoning) ──
   if(t2Failed.length>0 || configDrift.length>0){
-    log('🧠 Tier2: VLM深層分析開始（3枚スクリーンショット）...','o');
+    log(L('🧠 Tier2: VLM深層分析開始（3枚スクリーンショット）...'),'o');
     aiTag('tag-t2-analysis','orange');
     glowPanel('ai-panel','orange');
 
     if(t1Failed.length>0){
-      aiOut.textContent+='\n\n══ Tier 2 Multi-Agent VLM分析 ══\n📸 スクリーンショットキャプチャ中...';
+      aiOut.textContent+=`\n\n══ Tier 2 Multi-Agent ${R('VLM分析','VLM Analysis')} ══\n📸 ${R('スクリーンショットキャプチャ中...','Capturing screenshots...')}`;
     }else{
-      aiOut.innerHTML='<span style="color:var(--orange)">🧠 Tier2 Multi-Agent VLM — 3エージェント並列分析中...</span>';
+      aiOut.innerHTML=`<span style="color:var(--orange)">🧠 Tier2 Multi-Agent VLM — ${R('3エージェント並列分析中...','3-Agent parallel analysis...')}</span>`;
     }
 
     // Capture 3 screenshots at intervals
@@ -1339,38 +1401,38 @@ ${t1Diag.patches.map(p=>'  ✦ '+p+' ('+BN[p.replace('FIX_','')]+')').join('\n')
       await sleep(TIMING.SCREENSHOT_INTERVAL);
       const ss=captureSimScreenshot();
       screenshots.push(ss);
-      log(`📸 スクリーンショット ${i+1}/3 キャプチャ完了`,'o');
+      log(`📸 ${R('スクリーンショット','Screenshot')} ${i+1}/3 ${R('キャプチャ完了','captured')}`,'o');
     }
 
     const t2Diag=await callGeminiTier2(anomalies,frames,config,screenshots);
-    log('Tier2 VLM分析完了','o');
+    log(L('Tier2 VLM分析完了'),'o');
 
     // Sandbox validate the AI-generated patch
     const {safe:safePatch,rejected}=sandboxValidate(t2Diag.patch||{});
     if(rejected.length>0){
-      log(`🛡️ サンドボックス: ${rejected.length}件のパッチを拒否`,'w');
+      log(`🛡️ ${R('サンドボックス','Sandbox')}: ${rejected.length}${R('件のパッチを拒否',' patches rejected')}`,'w');
       rejected.forEach(r=>log(`  ✗ ${r}`,'w'));
     }
-    log(`🛡️ サンドボックス: ${Object.keys(safePatch).length}件のパッチを承認`,'i');
+    log(`🛡️ ${R('サンドボックス','Sandbox')}: ${Object.keys(safePatch).length}${R('件のパッチを承認',' patches approved')}`,'i');
 
     const confPct=t2Diag.confidence!=null?`${(t2Diag.confidence*100).toFixed(0)}%`:'N/A';
-    const t2Text=`\n\n══ Tier 2 Multi-Agent 診断結果 ══
+    const t2Text=`\n\n══ Tier 2 Multi-Agent ${R('診断結果','Diagnosis')} ══
 ── 🔍 Agent 1: Vision Analyst ──
-${t2Diag.visual_analysis||'分析不可'}
+${t2Diag.visual_analysis||R('分析不可','Analysis unavailable')}
 
 ── 📊 Agent 2: Physics Analyst ──
-${t2Diag.physics_analysis||'分析不可'}
+${t2Diag.physics_analysis||R('分析不可','Analysis unavailable')}
 
 ── 🧬 Agent 3: Repair Synthesizer ──
-${t2Diag.diagnosis||'不明'}
+${t2Diag.diagnosis||R('不明','Unknown')}
 
 ── 🎯 Confidence: ${confPct} ──
-${t2Diag.reasoning_chain||'(推論チェーンなし)'}
+${t2Diag.reasoning_chain||R('(推論チェーンなし)','(No reasoning chain)')}
 
-── 🧪 AI生成パッチ → サンドボックス検証 ──
-${Object.entries(safePatch).map(([k,v])=>`  ✦ ${k}: ${config[k]} → ${v} ✓`).join('\n')||'  (パッチなし)'}${rejected.length?'\n'+rejected.map(r=>`  ✗ ${r} (拒否)`).join('\n'):''}
+── 🧪 ${R('AI生成パッチ → サンドボックス検証','AI-Generated Patch → Sandbox Verification')} ──
+${Object.entries(safePatch).map(([k,v])=>`  ✦ ${k}: ${config[k]} → ${v} ✓`).join('\n')||`  ${R('(パッチなし)','(No patches)')}`}${rejected.length?'\n'+rejected.map(r=>`  ✗ ${r} ${R('(拒否)','(rejected)')}`).join('\n'):''}
 
-── エンジン ──
+── ${R('エンジン','Engine')} ──
   Gemini 3.1 Pro × 3-Agent Architecture`;
 
     if(t1Failed.length>0){
@@ -1380,15 +1442,15 @@ ${Object.entries(safePatch).map(([k,v])=>`  ✦ ${k}: ${config[k]} → ${v} ✓`
     }
 
     // Apply Tier 2 sandbox-validated patches
-    log('🩹 Tier2 サンドボックスパッチ適用中...','o');
+    log(L('🩹 Tier2 サンドボックスパッチ適用中...'),'o');
     if(dH)dH+='\n';
-    dH+='<span class="d-s">━━ Tier 2: AI生成修復（サンドボックス検証済） ━━</span>\n';
+    dH+=`<span class="d-s">${R('━━ Tier 2: AI生成修復（サンドボックス検証済） ━━','━━ Tier 2: AI-Generated Repair (Sandbox Verified) ━━')}</span>\n`;
     const pTag=document.getElementById('patch-tier-tag');
     pTag.textContent=t1Failed.length?'Tier 1+2':'Tier 2';pTag.className='tag tag-orange';pTag.style.display='';
 
     for(const [k,v] of Object.entries(safePatch)){
       const cur=config[k];const nv=v===null?'null(auto)':v;
-      if(cur===v||(cur==null&&v==null)){log(`  ⏭ ${k} スキップ（値変更なし）`,'i');continue;}
+      if(cur===v||(cur==null&&v==null)){log(`  ⏭ ${k} ${R('スキップ（値変更なし）','skipped (no value change)')}`,'i');continue;}
       dH+=`<span class="d-del">- ${k}: ${cur}</span>\n<span class="d-add">+ ${k}: ${nv}</span>\n`;
       fixed[k]=v;
       log(`  ✦ ${k}: ${cur} → ${nv}`,'o');
@@ -1400,12 +1462,12 @@ ${Object.entries(safePatch).map(([k,v])=>`  ✦ ${k}: ${config[k]} → ${v} ✓`
   setFlow('fs-guard','done');
   glowPanel('sim-panel','');
   aiTag('tag-patched','ok');
-  log('パッチ適用完了。シミュレータ再読込中...','i');
+  log(L('パッチ適用完了。シミュレータ再読込中...'),'i');
   await sleep(1500);
 
   // ═══ STEP 3: Verify ═══
   setFlow('fs-verify','active');setArrow('fa-2',true);
-  log('━━ STEP 3: 修復後検証（全10項目） ━━','i');
+  log(L('━━ STEP 3: 修復後検証（全10項目） ━━'),'i');
   scanline(true);
   ['B1','B2','B3','B4','B5','U1','U2','U3','U4','U5'].forEach(b=>setGauge(b,'checking'));
 
@@ -1424,7 +1486,7 @@ ${Object.entries(safePatch).map(([k,v])=>`  ✦ ${k}: ${config[k]} → ${v} ✓`
   const ra1=GAME.checkT1(fa,ca,true);
   for(const [b,res] of Object.entries(ra1)){
     setGauge(b,res.pass?'pass':'fail');
-    log(`  ${b}（${BN[b]}）: ${res.pass?'✓ 合格':'✗ 不合格'}`,res.pass?'i':'e');
+    log(`  ${b}（${getBN(b)}）: ${res.pass?R('✓ 合格','✓ Pass'):R('✗ 不合格','✗ Fail')}`,res.pass?'i':'e');
     await sleep(100);
   }
 
@@ -1432,7 +1494,7 @@ ${Object.entries(safePatch).map(([k,v])=>`  ✦ ${k}: ${config[k]} → ${v} ✓`
   const ra2=GAME.checkT2(fa,ca,true);
   for(const [b,res] of Object.entries(ra2)){
     setGauge(b,res.pass?'pass':'fail');
-    log(`  ${b}（${BN[b]}）: ${res.pass?'✓ 合格':'✗ 不合格'}`,res.pass?'i':'e');
+    log(`  ${b}（${getBN(b)}）: ${res.pass?R('✓ 合格','✓ Pass'):R('✗ 不合格','✗ Fail')}`,res.pass?'i':'e');
     await sleep(100);
   }
 
@@ -1446,10 +1508,10 @@ ${Object.entries(safePatch).map(([k,v])=>`  ✦ ${k}: ${config[k]} → ${v} ✓`
     const s2=Object.entries(ra2).filter(([,v])=>!v.pass).map(([k])=>k);
     const sf=[...s1,...s2];
     log('','o');
-    log('🔄 Self-Reflection Loop: 修復に失敗 → 再推論開始','o');
-    log(`  未通過: ${sf.map(b=>`${b}(${BN[b]})`).join(', ')}`,'o');
+    log(L('🔄 Self-Reflection Loop: 修復に失敗 → 再推論開始'),'o');
+    log(`  ${R('未通過','Failed')}: ${sf.map(b=>`${b}(${getBN(b)})`).join(', ')}`,'o');
 
-    aiOut.textContent+=`\n\n══ Self-Reflection Loop ══\n修復失敗: ${sf.join(', ')}\n再推論中...`;
+    aiOut.textContent+=`\n\n══ Self-Reflection Loop ══\n${R('修復失敗','Repair failed')}: ${sf.join(', ')}\n${R('再推論中...','Re-reasoning...')}`;
     aiOut.scrollTop=aiOut.scrollHeight;
 
     try{
@@ -1471,26 +1533,26 @@ ${Object.entries(safePatch).map(([k,v])=>`  ✦ ${k}: ${config[k]} → ${v} ✓`
 {"failure_analysis":"失敗原因","revised_patch":{"パラメータ名":値},"confidence":0.8}`;
 
       const ref=await callGeminiAPI([{text:refPrompt}]);
-      log(`  反省: ${ref.failure_analysis||'分析完了'}`,'o');
+      log(`  ${R('反省','Reflection')}: ${ref.failure_analysis||R('分析完了','Analysis complete')}`,'o');
 
       const {safe:rSafe}=sandboxValidate(ref.revised_patch||{});
       if(Object.keys(rSafe).length>0){
-        log('🩹 修正パッチ適用中...','o');
+        log(L('🩹 修正パッチ適用中...'),'o');
         const refixed={...ca};
         for(const [k,v] of Object.entries(rSafe)){
           refixed[k]=v;
           log(`  ✦ ${k}: ${ca[k]} → ${v===null?'null(auto)':v}`,'o');
-          dH+=`\n<span class="d-s">━━ Self-Reflection 修正 ━━</span>\n`;
+          dH+=`\n<span class="d-s">${R('━━ Self-Reflection 修正 ━━','━━ Self-Reflection Fix ━━')}</span>\n`;
           dH+=`<span class="d-del">- ${k}: ${ca[k]}</span>\n<span class="d-add">+ ${k}: ${v===null?'null(auto)':v}</span>\n`;
         }
         document.getElementById('diff-box').innerHTML=dH;
         applyConfig(refixed);
 
-        aiOut.textContent+=`\n反省結果: ${ref.failure_analysis||''}\nConfidence: ${ref.confidence?((ref.confidence*100).toFixed(0)+'%'):'N/A'}\n修正パッチ適用済 → 再検証中...`;
+        aiOut.textContent+=`\n${R('反省結果','Reflection result')}: ${ref.failure_analysis||''}\nConfidence: ${ref.confidence?((ref.confidence*100).toFixed(0)+'%'):'N/A'}\n${R('修正パッチ適用済 → 再検証中...','Correction patch applied → Re-verifying...')}`;
         aiOut.scrollTop=aiOut.scrollHeight;
 
         // Re-verify
-        log('━━ 再検証（Self-Reflection後） ━━','o');
+        log(L('━━ 再検証（Self-Reflection後） ━━'),'o');
         ['B1','B2','B3','B4','B5','U1','U2','U3','U4','U5'].forEach(b=>setGauge(b,'checking'));
         await waitForSimReady(TIMING.SIM_READY_TIMEOUT);
         try{const sw=document.getElementById('sim-frame').contentWindow;
@@ -1504,14 +1566,14 @@ ${Object.entries(safePatch).map(([k,v])=>`  ✦ ${k}: ${config[k]} → ${v} ✓`
         const rb2=GAME.checkT2(fb,cb,true);
         for(const [b,res] of Object.entries({...rb1,...rb2})){
           setGauge(b,res.pass?'pass':'fail');
-          log(`  ${b}（${BN[b]}）: ${res.pass?'✓':'✗'}`,res.pass?'i':'e');
+          log(`  ${b}（${getBN(b)}）: ${res.pass?'✓':'✗'}`,res.pass?'i':'e');
         }
         allPassT1=Object.values(rb1).every(r=>r.pass);
         allPassT2=Object.values(rb2).every(r=>r.pass);
         allPass=allPassT1&&allPassT2;
       }
     }catch(e){
-      log(`Self-Reflection エラー: ${e.message}`,'w');
+      log(`${R('Self-Reflection エラー','Self-Reflection error')}: ${e.message}`,'w');
     }
   }
 
@@ -1520,19 +1582,19 @@ ${Object.entries(safePatch).map(([k,v])=>`  ✦ ${k}: ${config[k]} → ${v} ✓`
     setFlow('fs-verify','done');
     simTag('tag-ok','ok');
     glowPanel('sim-panel','green');glowPanel('ai-panel','green');
-    showBanner('pass','✅ 全10項目 合格 — 自動修復に成功');
+    showBanner('pass',R('✅ 全10項目 合格 — 自動修復に成功','✅ All 10 Items Passed — Auto-repair successful'));
     fireConfetti();
-    log('🎉 全不変量チェック合格！シミュレータは安全にデプロイ可能です。','i');
+    log(L('🎉 全不変量チェック合格！シミュレータは安全にデプロイ可能です。'),'i');
   }else{
     const s1f=Object.entries(ra1).filter(([,v])=>!v.pass).map(([k])=>k);
     const s2f=Object.entries(ra2).filter(([,v])=>!v.pass).map(([k])=>k);
     const sff=[...s1f,...s2f];
     setFlow('fs-verify','broken');
-    showBanner('fail',`⚠ 一部未修復: ${sff.map(b=>BN[b]).join('、')}`);
-    log(`一部のチェックが未通過: ${sff.join(', ')}`,'w');
+    showBanner('fail',`${R('⚠ 一部未修復','⚠ Some items unrepaired')}: ${sff.map(b=>getBN(b)).join(currentLang==='en'?', ':'、')}`);
+    log(`${R('一部のチェックが未通過','Some checks failed')}: ${sff.join(', ')}`,'w');
   }
 
-  log('━━ パイプライン完了 ━━','i');
+  log(L('━━ パイプライン完了 ━━'),'i');
 }
 
 /* ═══════════════════════════════════
@@ -1545,7 +1607,7 @@ async function doAutoDemo(){
   // ══ ACT 1: Tier 1 (Known Bug → Catalog Fix) ══
   log('','i');
   log('╔══════════════════════════════════╗','a');
-  log('║  ACT 1: Tier1 既知バグ → カタログ修復  ║','a');
+  log(L('║  ACT 1: Tier1 既知バグ → カタログ修復  ║'),'a');
   log('╚══════════════════════════════════╝','a');
 
   try{
@@ -1553,7 +1615,7 @@ async function doAutoDemo(){
     await doBreak('t1');await sleep(2500);
     await doRun();
   }catch(e){
-    log(`Act 1 エラー: ${e.message} — Act 2 に進みます`,'e');
+    log(`Act 1 ${R('エラー','error')}: ${e.message} — ${R('Act 2 に進みます','Proceeding to Act 2')}`,'e');
     running=false;
   }
 
@@ -1563,7 +1625,7 @@ async function doAutoDemo(){
   // ══ ACT 2: Tier 2 (Unknown Bug → VLM Reasoning Fix) ══
   log('','i');
   log('╔══════════════════════════════════════╗','o');
-  log('║  ACT 2: Tier2 未知バグ → VLM推論修復    ║','o');
+  log(L('║  ACT 2: Tier2 未知バグ → VLM推論修復    ║'),'o');
   log('╚══════════════════════════════════════╝','o');
 
   try{
@@ -1571,12 +1633,12 @@ async function doAutoDemo(){
     await doBreak('t2');await sleep(2500);
     await doRun();
   }catch(e){
-    log(`Act 2 エラー: ${e.message}`,'e');
+    log(`Act 2 ${R('エラー','error')}: ${e.message}`,'e');
     running=false;
   }
 
   disBtn(false);
-  log('═══ 全幕終了 ═══','i');
+  log(L('═══ 全幕終了 ═══'),'i');
 }
 
 function doReset(){
@@ -1590,7 +1652,7 @@ function doReset(){
   simTag('tag-ok','ok');aiTag('tag-idle','ok');
   glowPanel('sim-panel','');glowPanel('ai-panel','');
   scanline(false);
-  log('リセット完了','i');
+  log(L('リセット完了'),'i');
 }
 
 /* ═══════════════════════════════════
@@ -1604,7 +1666,7 @@ function switchGame(type){
   updateGaugeLabels();
   buildFreeSliders();
   doReset();
-  log(`🎮 ゲーム切替: ${type==='stg'?'STG シューティング':'2D物理シミュレータ'}`,'i');
+  log(`🎮 ${R('ゲーム切替','Game switch')}: ${type==='stg'?R('STG シューティング','STG Shooter'):R('2D物理シミュレータ','2D Physics Simulator')}`,'i');
 }
 
 /* ═══════════════════════════════════
@@ -1664,7 +1726,7 @@ async function doFreeBreak(){
 
   const diffs=[];
   for(const [k,v] of Object.entries(broken)){if(GAME.healthy[k]!==v)diffs.push(`${k}: ${GAME.healthy[k]} → ${v}`);}
-  if(!diffs.length){log('全パラメータが正常値です。スライダーを変更してから実行してください。','w');return;}
+  if(!diffs.length){log(L('全パラメータが正常値です。スライダーを変更してから実行してください。'),'w');return;}
 
   resetFlow();resetGauges();hideBanner();
   document.getElementById('diff-box').textContent=T('patch-empty');
@@ -1675,9 +1737,9 @@ async function doFreeBreak(){
   setFlow('fs-break','active');
   glowPanel('sim-panel','red');
 
-  log('━━ フリーモード: カスタムバグ注入 ━━','o');
+  log(L('━━ フリーモード: カスタムバグ注入 ━━'),'o');
   diffs.forEach(d=>log(`  🎛️ ${d}`,'o'));
-  log(`変更数: ${diffs.length}件 — 事前定義なし、純粋AI推論で修復`,'o');
+  log(`${R('変更数','Changes')}: ${diffs.length}${R('件 — 事前定義なし、純粋AI推論で修復',' — No pre-definitions, pure AI reasoning repair')}`,'o');
 
   await sleep(500);
   applyConfig(broken);
@@ -1707,7 +1769,7 @@ async function waitForSimReady(timeout=5000){
     }catch(e){}
     await sleep(100);
   }
-  log('シミュレータ準備タイムアウト','w');
+  log(L('シミュレータ準備タイムアウト'),'w');
   return false;
 }
 async function waitForBallData(timeout=3000){
@@ -1738,10 +1800,10 @@ async function callGeminiAPI(parts,maxRetries=TIMING.API_MAX_RETRIES){
       return JSON.parse(cleaned);
     }catch(e){
       if(attempt<maxRetries){
-        log(`API再試行 (${attempt+1}/${maxRetries}): ${e.message}`,'w');
+        log(`${R('API再試行','API retry')} (${attempt+1}/${maxRetries}): ${e.message}`,'w');
         await sleep(TIMING.API_RETRY_DELAY);
       }else{
-        log(`Gemini APIエラー: ${e.message}`,'e');
+        log(`${R('Gemini APIエラー','Gemini API error')}: ${e.message}`,'e');
         throw e;
       }
     }
@@ -1752,11 +1814,11 @@ async function callGeminiAPI(parts,maxRetries=TIMING.API_MAX_RETRIES){
    INIT
    ════════════════════════════════════ */
 buildFreeSliders();
-log('GenieGuard v3.0 (2-Tier Architecture) 起動','i');
-log('Tier1: 既知バグ5種 → カタログ修復','i');
-log('Tier2: 未知バグ → 3-Agent VLM推論 + Self-Reflection修復','o');
-log('対応ゲーム: 2D物理 / STG シューティング','i');
-log('「▶ 自動デモ開始」で全工程を自動実行できます。','i');
+log(L('GenieGuard v3.0 (2-Tier Architecture) 起動'),'i');
+log(L('Tier1: 既知バグ5種 → カタログ修復'),'i');
+log(L('Tier2: 未知バグ → 3-Agent VLM推論 + Self-Reflection修復'),'o');
+log(L('対応ゲーム: 2D物理 / STG シューティング'),'i');
+log(L('「▶ 自動デモ開始」で全工程を自動実行できます。'),'i');
 </script>
 </body>
 </html>
