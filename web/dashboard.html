@@ -417,12 +417,12 @@
           <div style="font-size:.68rem;color:var(--dim);font-weight:700;margin-bottom:6px;" data-i18n="vlm-caption">📸 VLM分析用スクリーンショット：</div>
           <div class="vlm-gallery" id="vlm-gallery"></div>
         </div>
-        <div class="ai-output" id="ai-output">パイプライン実行を待っています。
+        <div class="ai-output" id="ai-output">Waiting for pipeline execution.
 
-下の「▶ 自動デモ開始」を押すと
-Act 1: 既知バグ → カタログ修復
-Act 2: 未知バグ → VLM推論修復
-の全工程をご覧いただけます。</div>
+Press "▶ Start Auto Demo" below to watch
+Act 1: Known Bug → Catalog Repair
+Act 2: Unknown Bug → VLM Reasoning Repair
+the full process.</div>
       </div>
     </div>
   </div>
@@ -527,7 +527,7 @@ Act 2: 未知バグ → VLM推論修復
 // ════════════════════════════════════════════════════════════════
 
 // ── Language Toggle ──────────────────────────────────────────
-let currentLang='ja';
+let currentLang='en';
 const LANG={
   ja:{
     'header-sub':'自動バグ検知 × Multi-Agent VLM推論 × Self-Reflection修復 — 2 Tier Architecture',
@@ -1768,7 +1768,7 @@ async function callGeminiAPI(parts,maxRetries=TIMING.API_MAX_RETRIES){
 /* ════════════════════════════════════
    INIT
    ════════════════════════════════════ */
-buildFreeSliders();
+setLang('en');
 log(L('GenieGuard v3.0 (2-Tier Architecture) started','GenieGuard v3.0 (2-Tier Architecture) 起動'),'i');
 log(L('Tier1: 5 known bugs → Catalog repair','Tier1: 既知バグ5種 → カタログ修復'),'i');
 log(L('Tier2: Unknown bugs → 3-Agent VLM reasoning + Self-Reflection repair','Tier2: 未知バグ → 3-Agent VLM推論 + Self-Reflection修復'),'o');
