@@ -929,7 +929,22 @@ function detectAnomalies(frames,config){
   const anomalies=[];
   const s=summarize(frames);
 
-  // Time progression
+  if(activeGame==='stg'){
+    // STG-specific behavioral anomaly detection
+    if(config.spawnInterval<10)
+      anomalies.push({type:'enemy_swarm',desc:R(`Enemy spawn interval too short (${config.spawnInterval})`,`敵出現間隔が短すぎる (${config.spawnInterval})`),severity:'high'});
+    if(config.bulletSpeed>0&&config.bulletSpeed<2)
+      anomalies.push({type:'slow_bullets',desc:R(`Bullet speed extremely slow (${config.bulletSpeed})`,`弾速が極端に遅い (${config.bulletSpeed})`),severity:'high'});
+    if(config.enemySpeed>10)
+      anomalies.push({type:'fast_enemies',desc:R(`Enemy speed abnormally high (${config.enemySpeed})`,`敵速度が異常に高い (${config.enemySpeed})`),severity:'high'});
+    if(config.hitboxRadius>50)
+      anomalies.push({type:'giant_hitbox',desc:R(`Hitbox radius abnormally large (${config.hitboxRadius})`,`判定半径が異常に大きい (${config.hitboxRadius})`),severity:'high'});
+    if(config.fireRate>0&&config.fireRate<3)
+      anomalies.push({type:'bullet_spam',desc:R(`Fire rate too rapid (fireRate=${config.fireRate})`,`発射レートが速すぎる (fireRate=${config.fireRate})`),severity:'high'});
+    return anomalies;
+  }
+
+  // Physics simulator anomaly detection
   // Time progression — only flag if timeScale config is actually abnormal (avoid iframe reload timing noise)
   const tsVal=config.timeScale??1;
   if(tsVal<0.5)anomalies.push({type:'time_frozen',desc:R(`Simulation speed extremely low (timeScale=${tsVal})`,`シミュレーション速度が極端に低い (timeScale=${tsVal})`),severity:'high'});
@@ -977,20 +992,29 @@ async function callGeminiTier1(results,summary){
   const screenshot=captureSimScreenshot();
   showVLMScreenshots(screenshot?[screenshot]:[]);
 
-  const textPrompt=`You are GenieGuard, an AI diagnostic system for physics simulator CI/CD pipelines.
+  const isSTG=activeGame==='stg';
+  const gameLabel=isSTG?'STG Shooter Game':'2D Physics Simulator';
+  const teleStr=isSTG
+    ? `bulletSpeed=${summary.config?.bulletSpeed}, fireRate=${summary.config?.fireRate}, spawnInterval=${summary.config?.spawnInterval}, enemySpeed=${summary.config?.enemySpeed}, playerSpeed=${summary.config?.playerSpeed}, hitboxRadius=${summary.config?.hitboxRadius}`
+    : `gravityY=${summary.config?.gravityY}, restitution=${summary.config?.restitution}, friction=${summary.config?.friction}, collisionMask=${summary.config?.collisionMask}, boundsEnabled=${summary.config?.boundsEnabled}, collisions=${summary.collisions}, Y-axis mean change=${summary.y_delta_mean?.toFixed(2)}`;
+  const patchList=isSTG
+    ? 'FIX_S1(Bullet Speed Repair), FIX_S2(Hitbox Repair), FIX_S3(Fire Rate Repair), FIX_S4(Player Speed Repair), FIX_S5(Enemy Speed Repair)'
+    : 'FIX_B1(Gravity Repair), FIX_B2(Collision Repair), FIX_B3(Bounce Repair), FIX_B4(Friction Repair), FIX_B5(Bounds Repair)';
+  const exPatch=isSTG?'FIX_S1':'FIX_B1';
+  const textPrompt=`You are GenieGuard, an AI diagnostic system for ${gameLabel} CI/CD pipelines.
 Analyze the following data${screenshot?' and the attached simulator screenshot':''} to identify anomalies.
 
-${screenshot?'[Visual Analysis] First examine the screenshot: observe the ball position, movement trajectory, and any physically unnatural behavior.\n':''}
+${screenshot?`[Visual Analysis] First examine the screenshot: observe the ${isSTG?'player ship, enemies, bullets, and any visually unnatural behavior':'ball position, movement trajectory, and any physically unnatural behavior'}.\n`:''}
 [Detected Anomalies — Tier 1 Known Bugs]
 ${failed.join('\n')}
 
 [Telemetry]
-gravityY=${summary.config?.gravityY}, restitution=${summary.config?.restitution}, friction=${summary.config?.friction}, collisionMask=${summary.config?.collisionMask}, boundsEnabled=${summary.config?.boundsEnabled}, collisions=${summary.collisions}, Y-axis mean change=${summary.y_delta_mean?.toFixed(2)}
+${teleStr}
 
-[Available Patches (Catalog)] FIX_B1(Gravity Repair), FIX_B2(Collision Repair), FIX_B3(Bounce Repair), FIX_B4(Friction Repair), FIX_B5(Bounds Repair)
+[Available Patches (Catalog)] ${patchList}
 
 Respond ONLY in the following JSON format:
-{"visual_analysis":"1-2 sentences describing observable anomalies from the screenshot","diagnosis":"2-3 sentences of detailed diagnosis based on telemetry data","patches":["FIX_B1"]}`;
+{"visual_analysis":"1-2 sentences describing observable anomalies from the screenshot","diagnosis":"2-3 sentences of detailed diagnosis based on telemetry data","patches":["${exPatch}"]}`;
 
   const parts=[{text:textPrompt}];
   if(screenshot)parts.push({inline_data:{mime_type:'image/jpeg',data:screenshot}});
@@ -1432,7 +1456,7 @@ ${Object.entries(safePatch).map(([k,v])=>`  ✦ ${k}: ${config[k]} → ${v} ✓`
   setFlow('fs-verify','active');setArrow('fa-2',true);
   log(L('━━ STEP 3: Post-Repair Verification (All 10 Items) ━━','━━ STEP 3: 修復後検証（全10項目） ━━'),'i');
   scanline(true);
-  ['B1','B2','B3','B4','B5','U1','U2','U3','U4','U5'].forEach(b=>setGauge(b,'checking'));
+  [...GAME.t1ids,...GAME.t2ids].forEach(b=>setGauge(b,'checking'));
 
   await waitForSimReady(TIMING.SIM_READY_TIMEOUT);
   try{const sw=document.getElementById('sim-frame').contentWindow;
@@ -1485,7 +1509,7 @@ The repair pipeline failed verification. Review the previous repair and generate
 
 [Post-Repair Config] ${JSON.stringify(ca)}
 
-[Healthy Defaults] gravityY=1, gravityX=0, timeScale=1, ballMass=1, ballRadius=20, ballInertia=null, restitution=0.6, friction=0.1, frictionAir=0.01, collisionMask=4294967295, boundsEnabled=true
+[Healthy Defaults] ${Object.entries(GAME.healthy).map(([k,v])=>`${k}=${v}`).join(', ')}
 
 [Reflection Instructions]
 1. Analyze why the previous repair was insufficient
@@ -1516,7 +1540,7 @@ Respond ONLY in JSON:
 
         // Re-verify
         log(L('━━ Re-verification (After Self-Reflection) ━━','━━ 再検証（Self-Reflection後） ━━'),'o');
-        ['B1','B2','B3','B4','B5','U1','U2','U3','U4','U5'].forEach(b=>setGauge(b,'checking'));
+        [...GAME.t1ids,...GAME.t2ids].forEach(b=>setGauge(b,'checking'));
         await waitForSimReady(TIMING.SIM_READY_TIMEOUT);
         try{const sw=document.getElementById('sim-frame').contentWindow;
           if(sw.resetSim)sw.resetSim();await sleep(300);if(sw.spawnBall)sw.spawnBall();}catch(e){}

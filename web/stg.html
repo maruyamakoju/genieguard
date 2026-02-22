@@ -462,7 +462,7 @@ function drawHpBar(e){
 // ── Bug detection (mirrors dashboard checks) ────────────────────────────────
 function detectBugs(){
   const bugs=[];
-  if(CFG.bulletSpeed<=0||CFG.bulletSpeed<2)bugs.push('S1');
+  if(CFG.bulletSpeed<=0)bugs.push('S1');
   if(CFG.hitboxRadius<=0)bugs.push('S2');
   if(CFG.fireRate>=100)bugs.push('S3');
   if(CFG.playerSpeed<=0)bugs.push('S4');
